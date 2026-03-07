@@ -54,22 +54,11 @@ public class LoginService implements Command<LoginInput, LoginResponse> {
                 );
 
         Authentication authentication;
-
         try {
             authentication = manager.authenticate(authToken);
         } catch (EmailNotVerifiedException ex) {
-            System.out.println("LOGIN AUTH EXCEPTION: " + ex.getClass().getName());
-            System.out.println("LOGIN AUTH MESSAGE: " + ex.getMessage());
-            System.out.println("LOGIN AUTH CAUSE: null");
             throw ex;
         } catch (BadCredentialsException | InternalAuthenticationServiceException ex) {
-            System.out.println("LOGIN AUTH EXCEPTION: " + ex.getClass().getName());
-            System.out.println("LOGIN AUTH MESSAGE: " + ex.getMessage());
-            System.out.println(
-                    "LOGIN AUTH CAUSE: " +
-                            (ex.getCause() != null ? ex.getCause().getClass().getName() : "null")
-            );
-
             Throwable cause = ex.getCause();
 
             if (cause instanceof EmailNotVerifiedException emailNotVerifiedException) {

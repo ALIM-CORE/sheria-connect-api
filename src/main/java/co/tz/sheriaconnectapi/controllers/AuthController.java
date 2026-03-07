@@ -24,6 +24,7 @@ public class AuthController {
     private final RequestPasswordResetService requestPasswordResetService;
     private final ResetPasswordService resetPasswordService;
     private final RegisterService registerService;
+    private final ResendVerificationEmailService resendVerificationEmailService;
 
     public AuthController(
             LoginService loginService,
@@ -32,7 +33,8 @@ public class AuthController {
             VerifyEmailService verifyEmailService,
             RequestPasswordResetService requestPasswordResetService,
             ResetPasswordService resetPasswordService,
-            RegisterService registerService
+            RegisterService registerService,
+            ResendVerificationEmailService resendVerificationEmailService
     ) {
         this.loginService = loginService;
         this.refreshService = refreshService;
@@ -41,6 +43,7 @@ public class AuthController {
         this.requestPasswordResetService = requestPasswordResetService;
         this.resetPasswordService = resetPasswordService;
         this.registerService = registerService;
+        this.resendVerificationEmailService = resendVerificationEmailService;
     }
 
     @PostMapping("/login")
@@ -104,7 +107,12 @@ public class AuthController {
         );
     }
 
-
+    @PostMapping("/verify-email/resend")
+    public ResponseEntity<StandardResponse<Void>> resendVerificationEmail(
+            @RequestBody ResendVerificationEmailDTO dto
+    ) {
+        return resendVerificationEmailService.execute(dto);
+    }
 
 
 }
