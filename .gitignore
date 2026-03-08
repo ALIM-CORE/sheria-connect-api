@@ -34,3 +34,12 @@ build/
 
 ### Environmental Variables ###
 .env
+
+
+###ignore these too###
+.git
+target/
+*.md
+*.iml
+.idea/
+.mvn/
