@@ -87,6 +87,20 @@ public class GlobalExceptionHandler {
         return ResponseUtil.error(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(PasswordResetTokenExpiredException.class)
+    public ResponseEntity<StandardResponse<Void>> handleExpiredPasswordResetToken(
+            PasswordResetTokenExpiredException ex
+    ){
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(InvalidPasswordResetTokenException.class)
+    public ResponseEntity<StandardResponse<Void>> handleInvalidPasswordResetToken(
+            InvalidPasswordResetTokenException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
     /**
      * Fallback handler to ensure ALL unexpected errors
      * still return the standard API response format.
