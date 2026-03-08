@@ -56,24 +56,7 @@ public class SecurityConfiguration {
         return provider;
     }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
-                "https://sheria-connect.co.tz",
-                "https://www.sheria-connect.co.tz",
-                "https://api.sheria-connect.co.tz",
-                "http://sheria-connect.co.tz",
-                "http://api.sheria-connect.co.tz"
-        ));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
 
 
     @Bean
