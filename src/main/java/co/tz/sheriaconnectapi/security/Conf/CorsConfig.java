@@ -17,7 +17,8 @@ public class CorsConfig implements WebMvcConfigurer {
                         "http://sheria-connect.co.tz",
                         "http://www.sheria-connect.co.tz",
                         "https://sheria-connect.co.tz",
-                        "https://www.sheria-connect.co.tz"
+                        "https://www.sheria-connect.co.tz",
+                        "10.0.2.2"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                 .allowedHeaders("*")
