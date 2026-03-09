@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -31,7 +32,10 @@ public class RegisterService implements Command<RegisterInput, UserDTO> {
     private final EmailService emailService;
 
     @Value("${app.frontend.base-url}")
-    private String frontendBaseUrl;
+    private String backendBaseUrl;
+
+    @Value("${app.frontend.base-domain}")
+    private String frontendBaseDomain;
 
     public RegisterService(
             UserRepository userRepository,
@@ -77,9 +81,15 @@ public class RegisterService implements Command<RegisterInput, UserDTO> {
         tokenRepository.save(token);
 
         // 5️⃣ Send verification email
-        String verificationLink =
-                frontendBaseUrl +
-                        "/auth/verify-email?token=" + token.getToken();
+        String verificationLink = UriComponentsBuilder
+                .fromUriString(frontendBaseDomain)
+                .path("/auth/verify-email")
+                .queryParam("token", token.getToken())
+                .queryParam("email", savedUser.getEmail())
+                .queryParam("api_base_url", backendBaseUrl)
+                .build()
+                .encode()
+                .toUriString();
 
         emailService.sendEmailVerification(
                 savedUser.getEmail(),

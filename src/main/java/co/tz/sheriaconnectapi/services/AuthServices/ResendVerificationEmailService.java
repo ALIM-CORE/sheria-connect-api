@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -28,7 +29,10 @@ public class ResendVerificationEmailService
     private final EmailService emailService;
 
     @Value("${app.frontend.base-url}")
-    private String frontendBaseUrl;
+    private String backendBaseUrl;
+
+    @Value("${app.frontend.base-domain}")
+    private String frontendBaseDomain;
 
     public ResendVerificationEmailService(
             UserRepository userRepository,
@@ -69,8 +73,15 @@ public class ResendVerificationEmailService
 
         tokenRepository.save(token);
 
-        String verificationLink =
-                frontendBaseUrl + "/auth/verify-email?token=" + token.getToken();
+        String verificationLink = UriComponentsBuilder
+                .fromUriString(frontendBaseDomain)
+                .path("/auth/verify-email")
+                .queryParam("token", token.getToken())
+                .queryParam("email", user.getEmail())
+                .queryParam("api_base_url", backendBaseUrl)
+                .build()
+                .encode()
+                .toUriString();
 
         emailService.sendEmailVerification(
                 user.getEmail(),
