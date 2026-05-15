@@ -3,7 +3,7 @@ services:
     build: .
     image: sheria-connect-backend:latest
     ports:
-      - "8085:8080"
+      - "6001:6001"
     env_file:
       - .env
     depends_on:

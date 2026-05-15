@@ -14,6 +14,7 @@ import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -25,11 +26,17 @@ import java.util.stream.Collectors;
 
 @Service
 public class RefreshService implements Command<RefreshInput, Map<String, Object>> {
+    private static final int WEB_REFRESH_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
 
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenCookieService refreshTokenCookieService;
 
-    public RefreshService(RefreshTokenRepository refreshTokenRepository) {
+    public RefreshService(
+            RefreshTokenRepository refreshTokenRepository,
+            RefreshTokenCookieService refreshTokenCookieService
+    ) {
         this.refreshTokenRepository = refreshTokenRepository;
+        this.refreshTokenCookieService = refreshTokenCookieService;
     }
 
     private String extractRefreshToken(
@@ -151,12 +158,13 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
 
         // 7️⃣ WEB → set HttpOnly cookie
         if (clientType == ClientType.WEB) {
-            Cookie cookie = new Cookie("refresh_token", newRefreshToken);
-            cookie.setHttpOnly(true);
-            cookie.setSecure(true);
-            cookie.setPath("/auth/refresh");
-            cookie.setMaxAge(7 * 24 * 60 * 60);
-            input.getResponse().addCookie(cookie);
+            input.getResponse().addHeader(
+                    HttpHeaders.SET_COOKIE,
+                    refreshTokenCookieService.create(
+                            newRefreshToken,
+                            java.time.Duration.ofSeconds(WEB_REFRESH_COOKIE_MAX_AGE_SECONDS)
+                    )
+            );
         }
 
         // 8️⃣ Build response body

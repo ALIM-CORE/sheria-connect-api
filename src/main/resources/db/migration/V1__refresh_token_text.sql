@@ -1,0 +1,2 @@
+ALTER TABLE IF EXISTS refresh_tokens
+    ALTER COLUMN token TYPE TEXT;

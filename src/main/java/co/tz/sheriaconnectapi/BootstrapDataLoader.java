@@ -38,7 +38,7 @@ public class BootstrapDataLoader implements CommandLineRunner {
         // 1️⃣ Generate Authorities
         // ==========================
         Reflections reflections =
-                new Reflections("co.tz.sheriaconnectapi.Model.Entities");
+                new Reflections("co.tz.sheriaconnectapi.model.Entities");
 
         Set<Class<?>> entities =
                 reflections.getTypesAnnotatedWith(Entity.class);

@@ -10,7 +10,7 @@ import co.tz.sheriaconnectapi.repositories.UserRepository;
 import co.tz.sheriaconnectapi.security.Jwt.ClientType;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
-import jakarta.servlet.http.Cookie;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,13 +22,16 @@ public class LogoutService implements Command<LogoutInput, Void> {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenCookieService refreshTokenCookieService;
 
     public LogoutService(
             UserRepository userRepository,
-            RefreshTokenRepository refreshTokenRepository
+            RefreshTokenRepository refreshTokenRepository,
+            RefreshTokenCookieService refreshTokenCookieService
     ) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.refreshTokenCookieService = refreshTokenCookieService;
     }
 
     @Transactional
@@ -66,12 +69,10 @@ public class LogoutService implements Command<LogoutInput, Void> {
         }
 
         if (clientType == ClientType.WEB) {
-            Cookie cookie = new Cookie("refresh_token", "");
-            cookie.setHttpOnly(true);
-            cookie.setSecure(true);
-            cookie.setPath("/auth/refresh");
-            cookie.setMaxAge(0);
-            input.getResponse().addCookie(cookie);
+            input.getResponse().addHeader(
+                    HttpHeaders.SET_COOKIE,
+                    refreshTokenCookieService.clear()
+            );
         }
 
         SecurityContextHolder.clearContext();

@@ -12,6 +12,10 @@ public class CorsConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedOrigins(
                         "http://76.13.14.56:8091",
+                        "http://76.13.14.56:4001",
+                        "http://76.13.14.56:6001",
+                        "http://localhost:4001",
+                        "http://127.0.0.1:4001",
                         "http://localhost:5173",
                         "http://127.0.0.1:5173",
                         "http://sheria-connect.co.tz",

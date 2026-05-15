@@ -16,6 +16,7 @@ import co.tz.sheriaconnectapi.security.Jwt.ClientType;
 import co.tz.sheriaconnectapi.security.Jwt.JwtUtil;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -29,19 +30,23 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class LoginService implements Command<LoginInput, LoginResponse> {
+    private static final int WEB_REFRESH_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
 
     private final AuthenticationManager manager;
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenCookieService refreshTokenCookieService;
 
     public LoginService(
             AuthenticationManager manager,
             UserRepository userRepository,
-            RefreshTokenRepository refreshTokenRepository
+            RefreshTokenRepository refreshTokenRepository,
+            RefreshTokenCookieService refreshTokenCookieService
     ) {
         this.manager = manager;
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.refreshTokenCookieService = refreshTokenCookieService;
     }
 
     @Override
@@ -107,11 +112,11 @@ public class LoginService implements Command<LoginInput, LoginResponse> {
 
             return ResponseEntity.ok()
                     .header(
-                            "Set-Cookie",
-                            "refresh_token=" + refreshToken +
-                                    "; HttpOnly; Path=/auth/refresh" +
-                                    "; Max-Age=" + (7 * 24 * 60 * 60) +
-                                    "; SameSite=None; Secure"
+                            HttpHeaders.SET_COOKIE,
+                            refreshTokenCookieService.create(
+                                    refreshToken,
+                                    java.time.Duration.ofSeconds(WEB_REFRESH_COOKIE_MAX_AGE_SECONDS)
+                            )
                     )
                     .body(
                             new StandardResponse<>(
