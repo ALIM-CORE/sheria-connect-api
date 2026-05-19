@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.*;
@@ -86,6 +87,7 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
     }
 
     @Override
+    @Transactional
     public ResponseEntity<StandardResponse<Map<String, Object>>> execute(
             RefreshInput input
     ) {
@@ -111,13 +113,17 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
                 );
 
         // 3️⃣ Check expiration / revocation
-        if (storedToken.isRevoked()
-                || storedToken.getExpiryDate().isBefore(Instant.now())) {
-
+        if (storedToken.getExpiryDate().isBefore(Instant.now())) {
             refreshTokenRepository.deleteAllByUserId(
                     storedToken.getUser().getId()
             );
 
+            throw new InvalidTokenException(
+                    ErrorMessages.INVALID_TOKEN.getMessage()
+            );
+        }
+
+        if (storedToken.isRevoked()) {
             throw new InvalidTokenException(
                     ErrorMessages.INVALID_TOKEN.getMessage()
             );

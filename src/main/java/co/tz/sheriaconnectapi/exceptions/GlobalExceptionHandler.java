@@ -2,6 +2,8 @@ package co.tz.sheriaconnectapi.exceptions;
 
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -43,6 +45,16 @@ public class GlobalExceptionHandler {
             InvalidLoginCredentialsException ex
     ) {
         return ResponseUtil.error(ex.getMessage(), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler({
+            AccessDeniedException.class,
+            AuthorizationDeniedException.class
+    })
+    public ResponseEntity<StandardResponse<Void>> handleAccessDenied(
+            RuntimeException ex
+    ) {
+        return ResponseUtil.error("Access denied", HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(InvalidClientTypeException.class)
@@ -99,6 +111,81 @@ public class GlobalExceptionHandler {
             InvalidPasswordResetTokenException ex
     ) {
         return ResponseUtil.error(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(IncidentReportNotFoundException.class)
+    public ResponseEntity<StandardResponse<Void>> handleIncidentReportNotFound(
+            IncidentReportNotFoundException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(ProviderProfileNotFoundException.class)
+    public ResponseEntity<StandardResponse<Void>> handleProviderProfileNotFound(
+            ProviderProfileNotFoundException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(MatchingRequestNotFoundException.class)
+    public ResponseEntity<StandardResponse<Void>> handleMatchingRequestNotFound(
+            MatchingRequestNotFoundException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(InvalidCaseNumberException.class)
+    public ResponseEntity<StandardResponse<Void>> handleInvalidCaseNumber(
+            InvalidCaseNumberException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(InvalidTrackingTokenException.class)
+    public ResponseEntity<StandardResponse<Void>> handleInvalidTrackingToken(
+            InvalidTrackingTokenException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(UnauthorizedCaseAccessException.class)
+    public ResponseEntity<StandardResponse<Void>> handleUnauthorizedCaseAccess(
+            UnauthorizedCaseAccessException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler({
+            MissingEvidenceFileException.class,
+            UnsupportedEvidenceTypeException.class,
+            InvalidStatusTransitionException.class,
+            InvalidMatchingRequestStatusException.class
+    })
+    public ResponseEntity<StandardResponse<Void>> handleBadCaseRequest(
+            RuntimeException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(DuplicateMatchingRequestException.class)
+    public ResponseEntity<StandardResponse<Void>> handleDuplicateMatchingRequest(
+            DuplicateMatchingRequestException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(EvidenceFileTooLargeException.class)
+    public ResponseEntity<StandardResponse<Void>> handleEvidenceFileTooLarge(
+            EvidenceFileTooLargeException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.PAYLOAD_TOO_LARGE);
+    }
+
+    @ExceptionHandler(EvidenceStorageException.class)
+    public ResponseEntity<StandardResponse<Void>> handleEvidenceStorage(
+            EvidenceStorageException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**

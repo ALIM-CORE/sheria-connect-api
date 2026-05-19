@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class JwtUtil {
@@ -48,6 +49,7 @@ public class JwtUtil {
                 .collect(Collectors.toList());
 
         return Jwts.builder()
+                .setId(UUID.randomUUID().toString())
                 .setSubject(user.getUsername())
                 .claim("authorities", authorities)
                 .setIssuedAt(new Date())

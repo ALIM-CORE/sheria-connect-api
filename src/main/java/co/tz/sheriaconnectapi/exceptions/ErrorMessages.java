@@ -18,6 +18,19 @@ public enum ErrorMessages {
     PASSWORD_RESET_TOKEN_INVALID("Invalid password reset token"),
     PASSWORD_RESET_TOKEN_EXPIRED("Password reset token expired"),
     INVALID_LOGIN_CREDENTIALS("Wrong email or password"),
+    INCIDENT_REPORT_NOT_FOUND("Incident report not found"),
+    INVALID_CASE_NUMBER("Invalid case number"),
+    INVALID_TRACKING_TOKEN("Invalid tracking token"),
+    UNAUTHORIZED_CASE_ACCESS("You are not allowed to access this case"),
+    MISSING_EVIDENCE_FILE("Evidence file is required"),
+    UNSUPPORTED_EVIDENCE_TYPE("Unsupported evidence file type"),
+    EVIDENCE_FILE_TOO_LARGE("Evidence file is too large"),
+    EVIDENCE_STORAGE_FAILED("Evidence file could not be stored"),
+    INVALID_STATUS_TRANSITION("Invalid case status transition"),
+    PROVIDER_PROFILE_NOT_FOUND("Provider profile not found"),
+    MATCHING_REQUEST_NOT_FOUND("Matching request not found"),
+    INVALID_MATCHING_REQUEST_STATUS("Invalid matching request status"),
+    DUPLICATE_MATCHING_REQUEST("This provider has already been matched to the case"),
     ;
 
     private final String message;
