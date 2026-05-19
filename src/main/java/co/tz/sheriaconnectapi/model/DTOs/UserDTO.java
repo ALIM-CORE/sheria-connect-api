@@ -2,12 +2,14 @@ package co.tz.sheriaconnectapi.model.DTOs;
 
 
 import co.tz.sheriaconnectapi.model.Entities.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 
 @Getter
@@ -21,14 +23,28 @@ public class UserDTO {
 
     @Enumerated(EnumType.STRING)
     private String profilePicture; // Base64 string
+
+    @JsonIgnore
     private String password;
+    private List<String> roles;
+    private List<String> authorities;
 
 
     public UserDTO(User user) {
         this.id = user.getId();
         this.name = user.getName();
         this.email = user.getEmail();
-        this.password = user.getPassword();
+        this.roles = user.getRoles().stream()
+                .map(role -> role.getName())
+                .distinct()
+                .sorted()
+                .toList();
+        this.authorities = user.getRoles().stream()
+                .flatMap(role -> role.getAuthorities().stream())
+                .map(authority -> authority.getName())
+                .distinct()
+                .sorted()
+                .toList();
 
     }
 
@@ -38,7 +54,17 @@ public class UserDTO {
         this.id = user.get().getId();
         this.name = user.get().getName();
         this.email = user.get().getEmail();
-        this.password = user.get().getPassword();
+        this.roles = user.get().getRoles().stream()
+                .map(role -> role.getName())
+                .distinct()
+                .sorted()
+                .toList();
+        this.authorities = user.get().getRoles().stream()
+                .flatMap(role -> role.getAuthorities().stream())
+                .map(authority -> authority.getName())
+                .distinct()
+                .sorted()
+                .toList();
 
     }
 

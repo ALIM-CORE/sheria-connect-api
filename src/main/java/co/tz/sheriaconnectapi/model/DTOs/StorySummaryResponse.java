@@ -15,7 +15,9 @@ public record StorySummaryResponse(
         AnonymityMode anonymityMode,
         String displayName,
         StoryModerationStatus moderationStatus,
+        String rejectionReason,
         long reactionCount,
+        long contentReportCount,
         boolean bookmarked,
         Instant createdAt,
         Instant publishedAt

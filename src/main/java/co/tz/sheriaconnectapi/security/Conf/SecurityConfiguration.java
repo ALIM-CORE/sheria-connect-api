@@ -78,6 +78,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/incident-reports/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/incident-reports/*/evidence").permitAll()
                         .requestMatchers(HttpMethod.GET, "/stories/mine").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/stories/bookmarks").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/stories/*").authenticated()
                         .requestMatchers(HttpMethod.GET, "/stories").permitAll()
                         .requestMatchers(HttpMethod.GET, "/stories/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/stories/*/reports").permitAll()

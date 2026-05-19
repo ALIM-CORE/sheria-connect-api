@@ -3,6 +3,8 @@ package co.tz.sheriaconnectapi.services.AuthServices;
 import co.tz.sheriaconnectapi.abstractions.Command;
 import co.tz.sheriaconnectapi.exceptions.ErrorMessages;
 import co.tz.sheriaconnectapi.exceptions.InvalidTokenException;
+import co.tz.sheriaconnectapi.exceptions.WebPortalAccessDeniedException;
+import co.tz.sheriaconnectapi.model.DTOs.UserDTO;
 import co.tz.sheriaconnectapi.model.DTOs.RefreshInput;
 import co.tz.sheriaconnectapi.model.DTOs.RefreshTokenRequest;
 import co.tz.sheriaconnectapi.model.Entities.RefreshToken;
@@ -31,13 +33,16 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final RefreshTokenCookieService refreshTokenCookieService;
+    private final WebPortalAccessService webPortalAccessService;
 
     public RefreshService(
             RefreshTokenRepository refreshTokenRepository,
-            RefreshTokenCookieService refreshTokenCookieService
+            RefreshTokenCookieService refreshTokenCookieService,
+            WebPortalAccessService webPortalAccessService
     ) {
         this.refreshTokenRepository = refreshTokenRepository;
         this.refreshTokenCookieService = refreshTokenCookieService;
+        this.webPortalAccessService = webPortalAccessService;
     }
 
     private String extractRefreshToken(
@@ -132,6 +137,12 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
         User user = storedToken.getUser();
         ClientType clientType = storedToken.getClientType();
 
+        if (clientType == ClientType.WEB && !webPortalAccessService.canAccessWebPortal(user)) {
+            storedToken.setRevoked(true);
+            refreshTokenRepository.save(storedToken);
+            throw new WebPortalAccessDeniedException();
+        }
+
         // 4️⃣ Rotate old refresh token
         storedToken.setRevoked(true);
         refreshTokenRepository.save(storedToken);
@@ -176,6 +187,7 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
         // 8️⃣ Build response body
         Map<String, Object> bodyResponse = new HashMap<>();
         bodyResponse.put("access", newAccessToken);
+        bodyResponse.put("user", new UserDTO(user));
 
         if (clientType == ClientType.MOBILE) {
             bodyResponse.put("refresh", newRefreshToken);

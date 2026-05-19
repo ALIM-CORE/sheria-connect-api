@@ -3,6 +3,7 @@ package co.tz.sheriaconnectapi.controllers;
 import co.tz.sheriaconnectapi.model.DTOs.CreateStoryModerationNoteInput;
 import co.tz.sheriaconnectapi.model.DTOs.CreateStoryModerationNoteRequest;
 import co.tz.sheriaconnectapi.model.DTOs.StoryLookupInput;
+import co.tz.sheriaconnectapi.model.DTOs.StoryModerationMetricsResponse;
 import co.tz.sheriaconnectapi.model.DTOs.StoryModerationNoteResponse;
 import co.tz.sheriaconnectapi.model.DTOs.StoryResponse;
 import co.tz.sheriaconnectapi.model.DTOs.StorySearchInput;
@@ -12,6 +13,7 @@ import co.tz.sheriaconnectapi.model.DTOs.UpdateStoryModerationRequest;
 import co.tz.sheriaconnectapi.model.Enums.StoryModerationStatus;
 import co.tz.sheriaconnectapi.services.StoryServices.AdminListStoriesService;
 import co.tz.sheriaconnectapi.services.StoryServices.CreateStoryModerationNoteService;
+import co.tz.sheriaconnectapi.services.StoryServices.GetStoryModerationMetricsService;
 import co.tz.sheriaconnectapi.services.StoryServices.GetStoryService;
 import co.tz.sheriaconnectapi.services.StoryServices.UpdateStoryModerationService;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
@@ -37,17 +39,20 @@ public class AdminStoryController {
     private final GetStoryService getStoryService;
     private final UpdateStoryModerationService updateStoryModerationService;
     private final CreateStoryModerationNoteService createStoryModerationNoteService;
+    private final GetStoryModerationMetricsService getStoryModerationMetricsService;
 
     public AdminStoryController(
             AdminListStoriesService adminListStoriesService,
             GetStoryService getStoryService,
             UpdateStoryModerationService updateStoryModerationService,
-            CreateStoryModerationNoteService createStoryModerationNoteService
+            CreateStoryModerationNoteService createStoryModerationNoteService,
+            GetStoryModerationMetricsService getStoryModerationMetricsService
     ) {
         this.adminListStoriesService = adminListStoriesService;
         this.getStoryService = getStoryService;
         this.updateStoryModerationService = updateStoryModerationService;
         this.createStoryModerationNoteService = createStoryModerationNoteService;
+        this.getStoryModerationMetricsService = getStoryModerationMetricsService;
     }
 
     @GetMapping
@@ -56,11 +61,18 @@ public class AdminStoryController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String region,
             @RequestParam(required = false) String district,
-            @RequestParam(required = false) StoryModerationStatus status
+            @RequestParam(required = false) StoryModerationStatus status,
+            @RequestParam(required = false) Boolean reportedOnly
     ) {
         return adminListStoriesService.execute(
-                new StorySearchInput(category, region, district, status, null)
+                new StorySearchInput(category, region, district, status, reportedOnly, null)
         );
+    }
+
+    @GetMapping("/metrics")
+    @PreAuthorize("hasAuthority('PUBLICSTORY_READ')")
+    public ResponseEntity<StandardResponse<StoryModerationMetricsResponse>> metrics() {
+        return getStoryModerationMetricsService.execute(null);
     }
 
     @GetMapping("/{publicId}")

@@ -11,20 +11,24 @@ import co.tz.sheriaconnectapi.model.DTOs.StoryResponse;
 import co.tz.sheriaconnectapi.model.DTOs.StorySearchInput;
 import co.tz.sheriaconnectapi.model.DTOs.StorySummaryResponse;
 import co.tz.sheriaconnectapi.model.DTOs.StoryUserActionInput;
+import co.tz.sheriaconnectapi.model.DTOs.UpdateStoryInput;
 import co.tz.sheriaconnectapi.services.StoryServices.BookmarkStoryService;
 import co.tz.sheriaconnectapi.services.StoryServices.CreateStoryService;
 import co.tz.sheriaconnectapi.services.StoryServices.GetStoryService;
+import co.tz.sheriaconnectapi.services.StoryServices.ListBookmarkedStoriesService;
 import co.tz.sheriaconnectapi.services.StoryServices.ListMyStoriesService;
 import co.tz.sheriaconnectapi.services.StoryServices.ListPublishedStoriesService;
 import co.tz.sheriaconnectapi.services.StoryServices.ReactToStoryService;
 import co.tz.sheriaconnectapi.services.StoryServices.RemoveStoryBookmarkService;
 import co.tz.sheriaconnectapi.services.StoryServices.RemoveStoryReactionService;
 import co.tz.sheriaconnectapi.services.StoryServices.ReportStoryContentService;
+import co.tz.sheriaconnectapi.services.StoryServices.UpdateStoryService;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,6 +46,8 @@ public class StoryController {
     private final ListPublishedStoriesService listPublishedStoriesService;
     private final GetStoryService getStoryService;
     private final ListMyStoriesService listMyStoriesService;
+    private final ListBookmarkedStoriesService listBookmarkedStoriesService;
+    private final UpdateStoryService updateStoryService;
     private final ReactToStoryService reactToStoryService;
     private final RemoveStoryReactionService removeStoryReactionService;
     private final BookmarkStoryService bookmarkStoryService;
@@ -53,6 +59,8 @@ public class StoryController {
             ListPublishedStoriesService listPublishedStoriesService,
             GetStoryService getStoryService,
             ListMyStoriesService listMyStoriesService,
+            ListBookmarkedStoriesService listBookmarkedStoriesService,
+            UpdateStoryService updateStoryService,
             ReactToStoryService reactToStoryService,
             RemoveStoryReactionService removeStoryReactionService,
             BookmarkStoryService bookmarkStoryService,
@@ -63,6 +71,8 @@ public class StoryController {
         this.listPublishedStoriesService = listPublishedStoriesService;
         this.getStoryService = getStoryService;
         this.listMyStoriesService = listMyStoriesService;
+        this.listBookmarkedStoriesService = listBookmarkedStoriesService;
+        this.updateStoryService = updateStoryService;
         this.reactToStoryService = reactToStoryService;
         this.removeStoryReactionService = removeStoryReactionService;
         this.bookmarkStoryService = bookmarkStoryService;
@@ -78,7 +88,7 @@ public class StoryController {
             Authentication authentication
     ) {
         return listPublishedStoriesService.execute(
-                new StorySearchInput(category, region, district, null, authentication)
+                new StorySearchInput(category, region, district, null, false, authentication)
         );
     }
 
@@ -97,12 +107,28 @@ public class StoryController {
         return listMyStoriesService.execute(authentication);
     }
 
+    @GetMapping("/bookmarks")
+    public ResponseEntity<StandardResponse<List<StorySummaryResponse>>> bookmarks(
+            Authentication authentication
+    ) {
+        return listBookmarkedStoriesService.execute(authentication);
+    }
+
     @GetMapping("/{publicId}")
     public ResponseEntity<StandardResponse<StoryResponse>> get(
             @PathVariable String publicId,
             Authentication authentication
     ) {
         return getStoryService.execute(new StoryLookupInput(publicId, authentication, false));
+    }
+
+    @PatchMapping("/{publicId}")
+    public ResponseEntity<StandardResponse<StoryResponse>> update(
+            @PathVariable String publicId,
+            @RequestBody CreateStoryRequest request,
+            Authentication authentication
+    ) {
+        return updateStoryService.execute(new UpdateStoryInput(publicId, request, authentication));
     }
 
     @PostMapping("/{publicId}/reactions")

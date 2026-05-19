@@ -18,9 +18,11 @@ public record StoryResponse(
         StoryModerationStatus moderationStatus,
         String rejectionReason,
         long reactionCount,
+        long contentReportCount,
         boolean bookmarked,
         Instant createdAt,
         Instant publishedAt,
-        List<StoryModerationNoteResponse> moderationNotes
+        List<StoryModerationNoteResponse> moderationNotes,
+        List<StoryContentReportResponse> contentReports
 ) {
 }

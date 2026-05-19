@@ -1,9 +1,11 @@
 package co.tz.sheriaconnectapi.repositories;
 
 import co.tz.sheriaconnectapi.model.Entities.ProviderProfile;
+import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.model.Enums.LegalServiceProviderType;
 import co.tz.sheriaconnectapi.model.Enums.ProviderAvailabilityStatus;
 import co.tz.sheriaconnectapi.model.Enums.ProviderVerificationStatus;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,9 +13,13 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProviderProfileRepository extends JpaRepository<ProviderProfile, Long> {
+
+    @EntityGraph(attributePaths = {"specialties", "regions"})
+    Optional<ProviderProfile> findFirstByUserOrderByCreatedAtDesc(User user);
 
     @Query("""
             SELECT DISTINCT p FROM ProviderProfile p

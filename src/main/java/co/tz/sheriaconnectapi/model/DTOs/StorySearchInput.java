@@ -8,6 +8,7 @@ public record StorySearchInput(
         String region,
         String district,
         StoryModerationStatus status,
+        Boolean reportedOnly,
         Authentication authentication
 ) {
 }

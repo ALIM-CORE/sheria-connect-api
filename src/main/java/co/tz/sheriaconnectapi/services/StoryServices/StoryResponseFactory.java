@@ -1,12 +1,15 @@
 package co.tz.sheriaconnectapi.services.StoryServices;
 
+import co.tz.sheriaconnectapi.model.DTOs.StoryContentReportResponse;
 import co.tz.sheriaconnectapi.model.DTOs.StoryModerationNoteResponse;
 import co.tz.sheriaconnectapi.model.DTOs.StoryResponse;
 import co.tz.sheriaconnectapi.model.DTOs.StorySummaryResponse;
 import co.tz.sheriaconnectapi.model.Entities.PublicStory;
+import co.tz.sheriaconnectapi.model.Entities.StoryContentReport;
 import co.tz.sheriaconnectapi.model.Entities.StoryModerationNote;
 import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.repositories.StoryBookmarkRepository;
+import co.tz.sheriaconnectapi.repositories.StoryContentReportRepository;
 import co.tz.sheriaconnectapi.repositories.StoryModerationNoteRepository;
 import co.tz.sheriaconnectapi.repositories.StoryReactionRepository;
 import org.springframework.stereotype.Service;
@@ -19,18 +22,29 @@ public class StoryResponseFactory {
     private final StoryReactionRepository storyReactionRepository;
     private final StoryBookmarkRepository storyBookmarkRepository;
     private final StoryModerationNoteRepository storyModerationNoteRepository;
+    private final StoryContentReportRepository storyContentReportRepository;
 
     public StoryResponseFactory(
             StoryReactionRepository storyReactionRepository,
             StoryBookmarkRepository storyBookmarkRepository,
-            StoryModerationNoteRepository storyModerationNoteRepository
+            StoryModerationNoteRepository storyModerationNoteRepository,
+            StoryContentReportRepository storyContentReportRepository
     ) {
         this.storyReactionRepository = storyReactionRepository;
         this.storyBookmarkRepository = storyBookmarkRepository;
         this.storyModerationNoteRepository = storyModerationNoteRepository;
+        this.storyContentReportRepository = storyContentReportRepository;
     }
 
     public StorySummaryResponse summary(PublicStory story, User viewer) {
+        return summary(story, viewer, false);
+    }
+
+    public StorySummaryResponse adminSummary(PublicStory story) {
+        return summary(story, null, true);
+    }
+
+    private StorySummaryResponse summary(PublicStory story, User viewer, boolean includeContentReportCount) {
         return new StorySummaryResponse(
                 story.getPublicId(),
                 story.getTitle(),
@@ -41,7 +55,9 @@ public class StoryResponseFactory {
                 story.getAnonymityMode(),
                 story.getDisplayName(),
                 story.getModerationStatus(),
+                story.getRejectionReason(),
                 storyReactionRepository.countByStory(story),
+                includeContentReportCount ? storyContentReportRepository.countByStory(story) : 0,
                 isBookmarked(story, viewer),
                 story.getCreatedAt(),
                 story.getPublishedAt()
@@ -53,6 +69,12 @@ public class StoryResponseFactory {
                 ? storyModerationNoteRepository.findByStoryOrderByCreatedAtDesc(story)
                         .stream()
                         .map(this::moderationNote)
+                        .toList()
+                : List.of();
+        List<StoryContentReportResponse> contentReports = includeModerationNotes
+                ? storyContentReportRepository.findByStoryOrderByCreatedAtDesc(story)
+                        .stream()
+                        .map(this::contentReport)
                         .toList()
                 : List.of();
 
@@ -68,10 +90,12 @@ public class StoryResponseFactory {
                 story.getModerationStatus(),
                 story.getRejectionReason(),
                 storyReactionRepository.countByStory(story),
+                includeModerationNotes ? storyContentReportRepository.countByStory(story) : 0,
                 isBookmarked(story, viewer),
                 story.getCreatedAt(),
                 story.getPublishedAt(),
-                moderationNotes
+                moderationNotes,
+                contentReports
         );
     }
 
@@ -81,6 +105,16 @@ public class StoryResponseFactory {
                 note.getNote(),
                 note.getAdminUser() == null ? null : note.getAdminUser().getName(),
                 note.getCreatedAt()
+        );
+    }
+
+    public StoryContentReportResponse contentReport(StoryContentReport report) {
+        return new StoryContentReportResponse(
+                report.getId(),
+                report.getReason(),
+                report.getDetails(),
+                report.getReporterUser() == null ? null : report.getReporterUser().getEmail(),
+                report.getCreatedAt()
         );
     }
 

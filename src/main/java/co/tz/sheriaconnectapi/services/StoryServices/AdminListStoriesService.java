@@ -4,6 +4,7 @@ import co.tz.sheriaconnectapi.abstractions.Query;
 import co.tz.sheriaconnectapi.model.DTOs.StorySearchInput;
 import co.tz.sheriaconnectapi.model.DTOs.StorySummaryResponse;
 import co.tz.sheriaconnectapi.model.Entities.PublicStory;
+import co.tz.sheriaconnectapi.model.Entities.StoryContentReport;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import jakarta.persistence.EntityManager;
@@ -11,6 +12,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -36,7 +38,7 @@ public class AdminListStoriesService implements Query<StorySearchInput, List<Sto
     public ResponseEntity<StandardResponse<List<StorySummaryResponse>>> execute(StorySearchInput input) {
         List<StorySummaryResponse> stories = search(input)
                 .stream()
-                .map(story -> storyResponseFactory.summary(story, null))
+                .map(storyResponseFactory::adminSummary)
                 .toList();
 
         return ResponseUtil.success(stories, "Stories retrieved successfully", HttpStatus.OK);
@@ -54,6 +56,14 @@ public class AdminListStoriesService implements Query<StorySearchInput, List<Sto
         addTextFilter(predicates, criteriaBuilder, story, "category", input.category());
         addTextFilter(predicates, criteriaBuilder, story, "region", input.region());
         addTextFilter(predicates, criteriaBuilder, story, "district", input.district());
+        if (Boolean.TRUE.equals(input.reportedOnly())) {
+            Subquery<Long> reportSubquery = criteriaQuery.subquery(Long.class);
+            Root<StoryContentReport> report = reportSubquery.from(StoryContentReport.class);
+            reportSubquery
+                    .select(report.<Long>get("id"))
+                    .where(criteriaBuilder.equal(report.get("story"), story));
+            predicates.add(criteriaBuilder.exists(reportSubquery));
+        }
 
         criteriaQuery
                 .select(story)

@@ -5,6 +5,7 @@ import co.tz.sheriaconnectapi.exceptions.EmailNotVerifiedException;
 import co.tz.sheriaconnectapi.exceptions.InvalidClientTypeException;
 import co.tz.sheriaconnectapi.exceptions.InvalidLoginCredentialsException;
 import co.tz.sheriaconnectapi.exceptions.UserNotFoundException;
+import co.tz.sheriaconnectapi.exceptions.WebPortalAccessDeniedException;
 import co.tz.sheriaconnectapi.model.Commands.LoginResponse;
 import co.tz.sheriaconnectapi.model.Commands.MobileLoginResponse;
 import co.tz.sheriaconnectapi.model.DTOs.LoginInput;
@@ -36,17 +37,20 @@ public class LoginService implements Command<LoginInput, LoginResponse> {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final RefreshTokenCookieService refreshTokenCookieService;
+    private final WebPortalAccessService webPortalAccessService;
 
     public LoginService(
             AuthenticationManager manager,
             UserRepository userRepository,
             RefreshTokenRepository refreshTokenRepository,
-            RefreshTokenCookieService refreshTokenCookieService
+            RefreshTokenCookieService refreshTokenCookieService,
+            WebPortalAccessService webPortalAccessService
     ) {
         this.manager = manager;
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.refreshTokenCookieService = refreshTokenCookieService;
+        this.webPortalAccessService = webPortalAccessService;
     }
 
     @Override
@@ -88,12 +92,17 @@ public class LoginService implements Command<LoginInput, LoginResponse> {
             }
         }
 
-        String accessToken = JwtUtil.generateAccessToken(userDetails, clientType);
-        String refreshToken = JwtUtil.generateRefreshToken(userDetails, clientType);
-
         User userEntity = userRepository.findByEmail(
                 loginInput.getUserLoginDTO().getEmail()
         ).orElseThrow(UserNotFoundException::new);
+
+        if (clientType == ClientType.WEB && !webPortalAccessService.canAccessWebPortal(userEntity)) {
+            SecurityContextHolder.clearContext();
+            throw new WebPortalAccessDeniedException();
+        }
+
+        String accessToken = JwtUtil.generateAccessToken(userDetails, clientType);
+        String refreshToken = JwtUtil.generateRefreshToken(userDetails, clientType);
 
         RefreshService.storeNewRefreshToken(
                 userEntity,
