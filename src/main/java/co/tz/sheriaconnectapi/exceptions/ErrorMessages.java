@@ -31,6 +31,11 @@ public enum ErrorMessages {
     MATCHING_REQUEST_NOT_FOUND("Matching request not found"),
     INVALID_MATCHING_REQUEST_STATUS("Invalid matching request status"),
     DUPLICATE_MATCHING_REQUEST("This provider has already been matched to the case"),
+    STORY_NOT_FOUND("Story not found"),
+    UNAUTHORIZED_STORY_ACCESS("You are not allowed to access this story"),
+    STORY_NOT_PUBLISHED("This story is not published"),
+    INVALID_STORY_MODERATION_STATUS("Invalid story moderation status"),
+    INVALID_STORY_CONTENT("Story content is invalid"),
     ;
 
     private final String message;

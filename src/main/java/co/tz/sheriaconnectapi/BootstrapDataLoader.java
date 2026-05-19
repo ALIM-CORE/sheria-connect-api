@@ -222,6 +222,11 @@ public class BootstrapDataLoader implements CommandLineRunner {
         authorities.addAll(createReadUpdate("ADMINCASENOTE"));
         authorities.addAll(createReadUpdate("PROVIDERPROFILE"));
         authorities.addAll(createReadUpdate("CASEMATCHREQUEST"));
+        authorities.addAll(createReadUpdate("PUBLICSTORY"));
+        authorities.addAll(readOnly("STORYREACTION"));
+        authorities.addAll(readOnly("STORYBOOKMARK"));
+        authorities.addAll(createReadUpdate("STORYCONTENTREPORT"));
+        authorities.addAll(createReadUpdate("STORYMODERATIONNOTE"));
 
         authorities.add("PASSWORDRESETTOKEN_READ");
         authorities.add("EMAILVERIFICATIONTOKEN_READ");

@@ -134,6 +134,13 @@ public class GlobalExceptionHandler {
         return ResponseUtil.error(ex.getMessage(), HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(StoryNotFoundException.class)
+    public ResponseEntity<StandardResponse<Void>> handleStoryNotFound(
+            StoryNotFoundException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(InvalidCaseNumberException.class)
     public ResponseEntity<StandardResponse<Void>> handleInvalidCaseNumber(
             InvalidCaseNumberException ex
@@ -156,10 +163,22 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({
+            UnauthorizedStoryAccessException.class,
+            StoryNotPublishedException.class
+    })
+    public ResponseEntity<StandardResponse<Void>> handleStoryAccessDenied(
+            RuntimeException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler({
             MissingEvidenceFileException.class,
             UnsupportedEvidenceTypeException.class,
             InvalidStatusTransitionException.class,
-            InvalidMatchingRequestStatusException.class
+            InvalidMatchingRequestStatusException.class,
+            InvalidStoryModerationStatusException.class,
+            InvalidStoryContentException.class
     })
     public ResponseEntity<StandardResponse<Void>> handleBadCaseRequest(
             RuntimeException ex
