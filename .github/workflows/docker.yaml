@@ -1,0 +1,41 @@
+name: Build, Push and Deploy Sheria-Connect Backend
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.NEW_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t ghcr.io/alim-core/sheria-connect-backend:${GITHUB_SHA::7} .
+
+      - name: Push Docker image
+        run: docker push ghcr.io/alim-core/sheria-connect-backend:${GITHUB_SHA::7}
+
+      - name: Deploy on server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          envs: GITHUB_SHA
+          script: |
+            echo "${{ secrets.NEW_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            cd ${{ secrets.SERVER_PATH }}
+            sed -i "s|ghcr.io/alim-core/sheria-connect-backend:.*|ghcr.io/alim-core/sheria-connect-backend:${GITHUB_SHA::7}|" docker-compose.yaml
+            docker compose pull
+            docker compose up -d
