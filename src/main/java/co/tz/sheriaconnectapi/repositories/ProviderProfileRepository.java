@@ -18,13 +18,14 @@ import java.util.Optional;
 @Repository
 public interface ProviderProfileRepository extends JpaRepository<ProviderProfile, Long> {
 
-    @EntityGraph(attributePaths = {"specialties", "regions"})
+    @EntityGraph(attributePaths = {"specialties", "regions", "languages"})
     Optional<ProviderProfile> findFirstByUserOrderByCreatedAtDesc(User user);
 
     @Query("""
             SELECT DISTINCT p FROM ProviderProfile p
             LEFT JOIN FETCH p.specialties
             LEFT JOIN FETCH p.regions
+            LEFT JOIN FETCH p.languages
             WHERE (:providerType IS NULL OR p.providerType = :providerType)
               AND (:verificationStatus IS NULL OR p.verificationStatus = :verificationStatus)
               AND (:availabilityStatus IS NULL OR p.availabilityStatus = :availabilityStatus)
@@ -42,6 +43,7 @@ public interface ProviderProfileRepository extends JpaRepository<ProviderProfile
             SELECT DISTINCT p FROM ProviderProfile p
             LEFT JOIN FETCH p.specialties
             LEFT JOIN FETCH p.regions
+            LEFT JOIN FETCH p.languages
             WHERE p.active = true
               AND p.verificationStatus = :verificationStatus
               AND p.availabilityStatus IN :availabilityStatuses
@@ -50,4 +52,7 @@ public interface ProviderProfileRepository extends JpaRepository<ProviderProfile
             @Param("verificationStatus") ProviderVerificationStatus verificationStatus,
             @Param("availabilityStatuses") Collection<ProviderAvailabilityStatus> availabilityStatuses
     );
+
+    @EntityGraph(attributePaths = {"specialties", "regions", "languages"})
+    Optional<ProviderProfile> findById(Long id);
 }

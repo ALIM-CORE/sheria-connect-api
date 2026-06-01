@@ -13,11 +13,13 @@ import co.tz.sheriaconnectapi.model.Entities.ProviderProfile;
 import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.model.Enums.IncidentReportStatus;
 import co.tz.sheriaconnectapi.model.Enums.MatchingRequestStatus;
+import co.tz.sheriaconnectapi.model.Enums.NotificationType;
 import co.tz.sheriaconnectapi.repositories.CaseMatchRequestRepository;
 import co.tz.sheriaconnectapi.repositories.CaseStatusHistoryRepository;
 import co.tz.sheriaconnectapi.repositories.IncidentReportRepository;
 import co.tz.sheriaconnectapi.repositories.ProviderProfileRepository;
 import co.tz.sheriaconnectapi.services.IncidentReportServices.IncidentReportAccessService;
+import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -51,19 +53,22 @@ public class UpdateMatchingRequestStatusService
     private final IncidentReportRepository incidentReportRepository;
     private final CaseStatusHistoryRepository caseStatusHistoryRepository;
     private final IncidentReportAccessService incidentReportAccessService;
+    private final NotificationDispatchService notificationDispatchService;
 
     public UpdateMatchingRequestStatusService(
             CaseMatchRequestRepository caseMatchRequestRepository,
             ProviderProfileRepository providerProfileRepository,
             IncidentReportRepository incidentReportRepository,
             CaseStatusHistoryRepository caseStatusHistoryRepository,
-            IncidentReportAccessService incidentReportAccessService
+            IncidentReportAccessService incidentReportAccessService,
+            NotificationDispatchService notificationDispatchService
     ) {
         this.caseMatchRequestRepository = caseMatchRequestRepository;
         this.providerProfileRepository = providerProfileRepository;
         this.incidentReportRepository = incidentReportRepository;
         this.caseStatusHistoryRepository = caseStatusHistoryRepository;
         this.incidentReportAccessService = incidentReportAccessService;
+        this.notificationDispatchService = notificationDispatchService;
     }
 
     @Override
@@ -110,6 +115,15 @@ public class UpdateMatchingRequestStatusService
         providerProfileRepository.save(providerProfile);
         incidentReportRepository.save(report);
         CaseMatchRequest saved = caseMatchRequestRepository.save(matchRequest);
+
+        notificationDispatchService.notify(
+                report.getReporterUser(),
+                NotificationType.MATCHING_REQUEST_UPDATED,
+                "Matching request " + toStatus.name().toLowerCase().replace('_', ' '),
+                "A provider updated a matching request for case " + report.getCaseNumber() + ".",
+                "INCIDENT_REPORT",
+                report.getCaseNumber()
+        );
 
         return ResponseUtil.success(
                 new MatchingRequestResponse(saved),

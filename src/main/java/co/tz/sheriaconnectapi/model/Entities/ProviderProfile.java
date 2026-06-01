@@ -67,6 +67,12 @@ public class ProviderProfile {
     @Column(length = 80)
     private String phone;
 
+    @Column(name = "license_number", length = 120)
+    private String licenseNumber;
+
+    @Column(name = "registration_number", length = 120)
+    private String registrationNumber;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "verification_status", nullable = false, length = 32)
     private ProviderVerificationStatus verificationStatus = ProviderVerificationStatus.PENDING;
@@ -107,6 +113,20 @@ public class ProviderProfile {
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
+    @Column(name = "verification_rejection_reason", columnDefinition = "TEXT")
+    private String verificationRejectionReason;
+
+    @ElementCollection
+    @CollectionTable(
+            name = "provider_profile_languages",
+            joinColumns = @JoinColumn(name = "provider_profile_id")
+    )
+    @Column(name = "language", nullable = false, length = 80)
+    private Set<String> languages = new HashSet<>();
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;

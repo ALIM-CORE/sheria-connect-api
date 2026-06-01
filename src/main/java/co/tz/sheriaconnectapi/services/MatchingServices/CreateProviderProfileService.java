@@ -59,6 +59,12 @@ public class CreateProviderProfileService
         providerProfile.setOrganizationName(trimToNull(request.getOrganizationName()));
         providerProfile.setEmail(trimToNull(request.getEmail()));
         providerProfile.setPhone(trimToNull(request.getPhone()));
+        providerProfile.setLicenseNumber(trimToNull(request.getLicenseNumber()));
+        providerProfile.setRegistrationNumber(trimToNull(request.getRegistrationNumber()));
+        providerProfile.setBio(trimToNull(request.getBio()));
+        providerProfile.setVerificationRejectionReason(
+                trimToNull(request.getVerificationRejectionReason())
+        );
         providerProfile.setVerificationStatus(
                 request.getVerificationStatus() == null
                         ? ProviderVerificationStatus.PENDING
@@ -88,6 +94,15 @@ public class CreateProviderProfileService
                     request.getRegions().stream()
                             .filter(region -> region != null && !region.isBlank())
                             .map(region -> region.trim().toLowerCase(Locale.ROOT))
+                            .collect(Collectors.toSet())
+            );
+        }
+
+        if (request.getLanguages() != null) {
+            providerProfile.setLanguages(
+                    request.getLanguages().stream()
+                            .filter(language -> language != null && !language.isBlank())
+                            .map(language -> language.trim())
                             .collect(Collectors.toSet())
             );
         }

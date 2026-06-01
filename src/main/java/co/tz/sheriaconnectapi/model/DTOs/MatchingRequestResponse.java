@@ -10,6 +10,7 @@ import java.time.Instant;
 public class MatchingRequestResponse {
     private final Long id;
     private final String caseNumber;
+    private final IncidentReportSummaryResponse report;
     private final ProviderProfileResponse providerProfile;
     private final MatchingRequestStatus status;
     private final int score;
@@ -23,6 +24,7 @@ public class MatchingRequestResponse {
     public MatchingRequestResponse(CaseMatchRequest matchRequest) {
         this.id = matchRequest.getId();
         this.caseNumber = matchRequest.getIncidentReport().getCaseNumber();
+        this.report = new IncidentReportSummaryResponse(matchRequest.getIncidentReport());
         this.providerProfile = new ProviderProfileResponse(matchRequest.getProviderProfile());
         this.status = matchRequest.getStatus();
         this.score = matchRequest.getScore();

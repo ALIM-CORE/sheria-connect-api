@@ -36,6 +36,8 @@ public class BootstrapDataLoader implements CommandLineRunner {
     private static final String ENTITY_PACKAGE = "co.tz.sheriaconnectapi.model.Entities";
     private static final String SUPER_ADMIN = "SUPER_ADMIN";
     private static final String SYSTEM_ADMIN = "SYSTEM_ADMIN";
+    private static final String CITIZEN = "CITIZEN";
+    private static final String PROVIDER = "PROVIDER";
 
     private final AuthorityRepository authorityRepository;
     private final RoleRepository roleRepository;
@@ -205,6 +207,8 @@ public class BootstrapDataLoader implements CommandLineRunner {
         Map<String, Set<String>> roleAuthorityMap = new LinkedHashMap<>();
         roleAuthorityMap.put(SUPER_ADMIN, Set.of("*"));
         roleAuthorityMap.put(SYSTEM_ADMIN, systemAdminAuthorities());
+        roleAuthorityMap.put(CITIZEN, Set.of());
+        roleAuthorityMap.put(PROVIDER, providerAuthorities());
         return roleAuthorityMap;
     }
 
@@ -231,6 +235,15 @@ public class BootstrapDataLoader implements CommandLineRunner {
         authorities.add("PASSWORDRESETTOKEN_READ");
         authorities.add("EMAILVERIFICATIONTOKEN_READ");
 
+        return authorities;
+    }
+
+    private Set<String> providerAuthorities() {
+        Set<String> authorities = new HashSet<>();
+        authorities.add("PROVIDERPROFILE_READ");
+        authorities.add("PROVIDERPROFILE_UPDATE");
+        authorities.add("CASEMATCHREQUEST_READ");
+        authorities.add("CASEMATCHREQUEST_UPDATE");
         return authorities;
     }
 

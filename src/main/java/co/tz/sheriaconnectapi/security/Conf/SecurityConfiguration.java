@@ -83,6 +83,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/stories").permitAll()
                         .requestMatchers(HttpMethod.GET, "/stories/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/stories/*/reports").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/knowledge/articles").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/knowledge/articles/*").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

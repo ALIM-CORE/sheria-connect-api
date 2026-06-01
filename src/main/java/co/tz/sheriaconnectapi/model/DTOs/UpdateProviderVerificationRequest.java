@@ -12,4 +12,5 @@ public class UpdateProviderVerificationRequest {
     private ProviderAvailabilityStatus availabilityStatus;
     private Boolean active;
     private String notes;
+    private String rejectionReason;
 }

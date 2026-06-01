@@ -51,7 +51,11 @@ public class UpsertMyProviderProfileService
         profile.setOrganizationName(trimToNull(request.getOrganizationName()));
         profile.setEmail(trimToNull(request.getEmail()));
         profile.setPhone(trimToNull(request.getPhone()));
+        profile.setLicenseNumber(trimToNull(request.getLicenseNumber()));
+        profile.setRegistrationNumber(trimToNull(request.getRegistrationNumber()));
+        profile.setBio(trimToNull(request.getBio()));
         profile.setVerificationStatus(ProviderVerificationStatus.PENDING);
+        profile.setVerificationRejectionReason(null);
         profile.setAvailabilityStatus(
                 request.getAvailabilityStatus() == null
                         ? profile.getAvailabilityStatus()
@@ -79,6 +83,16 @@ public class UpsertMyProviderProfileService
                     request.getRegions().stream()
                             .filter(region -> region != null && !region.isBlank())
                             .map(region -> region.trim().toLowerCase(Locale.ROOT))
+                            .collect(Collectors.toSet())
+            );
+        }
+
+        profile.getLanguages().clear();
+        if (request.getLanguages() != null) {
+            profile.getLanguages().addAll(
+                    request.getLanguages().stream()
+                            .filter(language -> language != null && !language.isBlank())
+                            .map(String::trim)
                             .collect(Collectors.toSet())
             );
         }

@@ -9,8 +9,10 @@ import co.tz.sheriaconnectapi.model.DTOs.UpdateStoryModerationInput;
 import co.tz.sheriaconnectapi.model.DTOs.UpdateStoryModerationRequest;
 import co.tz.sheriaconnectapi.model.Entities.PublicStory;
 import co.tz.sheriaconnectapi.model.Entities.User;
+import co.tz.sheriaconnectapi.model.Enums.NotificationType;
 import co.tz.sheriaconnectapi.model.Enums.StoryModerationStatus;
 import co.tz.sheriaconnectapi.repositories.PublicStoryRepository;
+import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -25,15 +27,18 @@ public class UpdateStoryModerationService implements Command<UpdateStoryModerati
     private final PublicStoryRepository publicStoryRepository;
     private final StoryAccessService storyAccessService;
     private final StoryResponseFactory storyResponseFactory;
+    private final NotificationDispatchService notificationDispatchService;
 
     public UpdateStoryModerationService(
             PublicStoryRepository publicStoryRepository,
             StoryAccessService storyAccessService,
-            StoryResponseFactory storyResponseFactory
+            StoryResponseFactory storyResponseFactory,
+            NotificationDispatchService notificationDispatchService
     ) {
         this.publicStoryRepository = publicStoryRepository;
         this.storyAccessService = storyAccessService;
         this.storyResponseFactory = storyResponseFactory;
+        this.notificationDispatchService = notificationDispatchService;
     }
 
     @Override
@@ -61,6 +66,16 @@ public class UpdateStoryModerationService implements Command<UpdateStoryModerati
         }
 
         PublicStory savedStory = publicStoryRepository.save(story);
+
+        notificationDispatchService.notify(
+                savedStory.getAuthorUser(),
+                NotificationType.STORY_MODERATION_DECISION,
+                "Story moderation updated",
+                "Your story \"" + savedStory.getTitle() + "\" is now "
+                        + savedStory.getModerationStatus().name().toLowerCase().replace('_', ' ') + ".",
+                "STORY",
+                savedStory.getPublicId()
+        );
 
         return ResponseUtil.success(
                 storyResponseFactory.detail(savedStory, admin, true),

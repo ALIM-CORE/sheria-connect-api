@@ -6,6 +6,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -38,6 +39,13 @@ public class GlobalExceptionHandler {
             UserNotValidException ex
     ) {
         return ResponseUtil.error(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<StandardResponse<Void>> handleUnreadableRequest(
+            HttpMessageNotReadableException ex
+    ) {
+        return ResponseUtil.error("Invalid request payload", HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(InvalidLoginCredentialsException.class)
@@ -148,6 +156,20 @@ public class GlobalExceptionHandler {
         return ResponseUtil.error(ex.getMessage(), HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(KnowledgeArticleNotFoundException.class)
+    public ResponseEntity<StandardResponse<Void>> handleKnowledgeArticleNotFound(
+            KnowledgeArticleNotFoundException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(NotificationNotFoundException.class)
+    public ResponseEntity<StandardResponse<Void>> handleNotificationNotFound(
+            NotificationNotFoundException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(InvalidCaseNumberException.class)
     public ResponseEntity<StandardResponse<Void>> handleInvalidCaseNumber(
             InvalidCaseNumberException ex
@@ -172,7 +194,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             UnauthorizedStoryAccessException.class,
             StoryNotPublishedException.class,
-            UnauthorizedProviderProfileAccessException.class
+            UnauthorizedProviderProfileAccessException.class,
+            CaseMessageAccessDeniedException.class
     })
     public ResponseEntity<StandardResponse<Void>> handleStoryAccessDenied(
             RuntimeException ex

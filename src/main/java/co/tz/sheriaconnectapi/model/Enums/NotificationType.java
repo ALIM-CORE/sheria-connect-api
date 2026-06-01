@@ -1,0 +1,10 @@
+package co.tz.sheriaconnectapi.model.Enums;
+
+public enum NotificationType {
+    CASE_STATUS_CHANGED,
+    STORY_MODERATION_DECISION,
+    PROVIDER_VERIFICATION_DECISION,
+    MATCHING_REQUEST_CREATED,
+    MATCHING_REQUEST_UPDATED,
+    CASE_MESSAGE_CREATED
+}

@@ -6,7 +6,10 @@ import co.tz.sheriaconnectapi.exceptions.UserNotValidException;
 import co.tz.sheriaconnectapi.model.DTOs.ProviderProfileResponse;
 import co.tz.sheriaconnectapi.model.DTOs.UpdateProviderVerificationInput;
 import co.tz.sheriaconnectapi.model.Entities.ProviderProfile;
+import co.tz.sheriaconnectapi.model.Enums.NotificationType;
+import co.tz.sheriaconnectapi.model.Enums.ProviderVerificationStatus;
 import co.tz.sheriaconnectapi.repositories.ProviderProfileRepository;
+import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -18,11 +21,14 @@ public class UpdateProviderVerificationService
         implements Command<UpdateProviderVerificationInput, ProviderProfileResponse> {
 
     private final ProviderProfileRepository providerProfileRepository;
+    private final NotificationDispatchService notificationDispatchService;
 
     public UpdateProviderVerificationService(
-            ProviderProfileRepository providerProfileRepository
+            ProviderProfileRepository providerProfileRepository,
+            NotificationDispatchService notificationDispatchService
     ) {
         this.providerProfileRepository = providerProfileRepository;
+        this.notificationDispatchService = notificationDispatchService;
     }
 
     @Override
@@ -38,6 +44,11 @@ public class UpdateProviderVerificationService
                 .orElseThrow(ProviderProfileNotFoundException::new);
 
         providerProfile.setVerificationStatus(input.request().getVerificationStatus());
+        providerProfile.setVerificationRejectionReason(
+                input.request().getVerificationStatus() == ProviderVerificationStatus.REJECTED
+                        ? trimToNull(input.request().getRejectionReason())
+                        : null
+        );
         if (input.request().getAvailabilityStatus() != null) {
             providerProfile.setAvailabilityStatus(input.request().getAvailabilityStatus());
         }
@@ -49,10 +60,24 @@ public class UpdateProviderVerificationService
         }
 
         ProviderProfile saved = providerProfileRepository.save(providerProfile);
+        notificationDispatchService.notify(
+                saved.getUser(),
+                NotificationType.PROVIDER_VERIFICATION_DECISION,
+                "Provider verification updated",
+                "Your provider profile is now "
+                        + saved.getVerificationStatus().name().toLowerCase().replace('_', ' ') + ".",
+                "PROVIDER_PROFILE",
+                String.valueOf(saved.getId())
+        );
+
         return ResponseUtil.success(
                 new ProviderProfileResponse(saved),
                 "Provider profile updated successfully",
                 HttpStatus.OK
         );
+    }
+
+    private String trimToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

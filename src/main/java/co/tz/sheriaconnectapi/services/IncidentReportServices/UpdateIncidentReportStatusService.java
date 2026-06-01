@@ -11,8 +11,10 @@ import co.tz.sheriaconnectapi.model.Entities.CaseStatusHistory;
 import co.tz.sheriaconnectapi.model.Entities.IncidentReport;
 import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.model.Enums.IncidentReportStatus;
+import co.tz.sheriaconnectapi.model.Enums.NotificationType;
 import co.tz.sheriaconnectapi.repositories.CaseStatusHistoryRepository;
 import co.tz.sheriaconnectapi.repositories.IncidentReportRepository;
+import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -81,17 +83,20 @@ public class UpdateIncidentReportStatusService
     private final CaseStatusHistoryRepository caseStatusHistoryRepository;
     private final IncidentReportAccessService accessService;
     private final IncidentReportResponseFactory responseFactory;
+    private final NotificationDispatchService notificationDispatchService;
 
     public UpdateIncidentReportStatusService(
             IncidentReportRepository incidentReportRepository,
             CaseStatusHistoryRepository caseStatusHistoryRepository,
             IncidentReportAccessService accessService,
-            IncidentReportResponseFactory responseFactory
+            IncidentReportResponseFactory responseFactory,
+            NotificationDispatchService notificationDispatchService
     ) {
         this.incidentReportRepository = incidentReportRepository;
         this.caseStatusHistoryRepository = caseStatusHistoryRepository;
         this.accessService = accessService;
         this.responseFactory = responseFactory;
+        this.notificationDispatchService = notificationDispatchService;
     }
 
     @Override
@@ -127,6 +132,16 @@ public class UpdateIncidentReportStatusService
             history.setChangedByUser(adminUser);
             history.setNote(trimToNull(request.getNote()));
             caseStatusHistoryRepository.save(history);
+
+            notificationDispatchService.notify(
+                    report.getReporterUser(),
+                    NotificationType.CASE_STATUS_CHANGED,
+                    "Case status updated",
+                    "Case " + report.getCaseNumber() + " is now "
+                            + newStatus.name().toLowerCase().replace('_', ' ') + ".",
+                    "INCIDENT_REPORT",
+                    report.getCaseNumber()
+            );
         }
 
         return ResponseUtil.success(

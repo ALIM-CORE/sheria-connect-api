@@ -24,6 +24,7 @@ public class AuthController {
     private final RequestPasswordResetService requestPasswordResetService;
     private final ResetPasswordService resetPasswordService;
     private final RegisterService registerService;
+    private final RegisterProviderService registerProviderService;
     private final ResendVerificationEmailService resendVerificationEmailService;
 
     public AuthController(
@@ -34,6 +35,7 @@ public class AuthController {
             RequestPasswordResetService requestPasswordResetService,
             ResetPasswordService resetPasswordService,
             RegisterService registerService,
+            RegisterProviderService registerProviderService,
             ResendVerificationEmailService resendVerificationEmailService
     ) {
         this.loginService = loginService;
@@ -43,6 +45,7 @@ public class AuthController {
         this.requestPasswordResetService = requestPasswordResetService;
         this.resetPasswordService = resetPasswordService;
         this.registerService = registerService;
+        this.registerProviderService = registerProviderService;
         this.resendVerificationEmailService = resendVerificationEmailService;
     }
 
@@ -105,6 +108,13 @@ public class AuthController {
         return registerService.execute(
                 new RegisterInput(user, request)
         );
+    }
+
+    @PostMapping("/register/provider")
+    public ResponseEntity<StandardResponse<UserDTO>> registerProvider(
+            @RequestBody ProviderRegisterRequest request
+    ) {
+        return registerProviderService.execute(request);
     }
 
     @PostMapping("/verify-email/resend")

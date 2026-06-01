@@ -19,13 +19,18 @@ public class CreateProviderProfileRequest {
     private String organizationName;
     private String email;
     private String phone;
+    private String licenseNumber;
+    private String registrationNumber;
+    private String bio;
     private ProviderVerificationStatus verificationStatus;
     private Set<IncidentType> specialties;
     private Set<String> regions;
+    private Set<String> languages;
     private ProviderAvailabilityStatus availabilityStatus;
     private PricingTier pricingTier;
     private Boolean active;
     private Integer currentWorkload;
     private Integer maxActiveCases;
     private String notes;
+    private String verificationRejectionReason;
 }
