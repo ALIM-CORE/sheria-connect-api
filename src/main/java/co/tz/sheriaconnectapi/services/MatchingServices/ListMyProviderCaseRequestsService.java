@@ -19,13 +19,16 @@ public class ListMyProviderCaseRequestsService
 
     private final ProviderCaseRequestAccessService accessService;
     private final CaseMatchRequestRepository caseMatchRequestRepository;
+    private final ProviderMatchingRequestResponseFactory responseFactory;
 
     public ListMyProviderCaseRequestsService(
             ProviderCaseRequestAccessService accessService,
-            CaseMatchRequestRepository caseMatchRequestRepository
+            CaseMatchRequestRepository caseMatchRequestRepository,
+            ProviderMatchingRequestResponseFactory responseFactory
     ) {
         this.accessService = accessService;
         this.caseMatchRequestRepository = caseMatchRequestRepository;
+        this.responseFactory = responseFactory;
     }
 
     @Override
@@ -36,7 +39,7 @@ public class ListMyProviderCaseRequestsService
         List<MatchingRequestResponse> requests = caseMatchRequestRepository
                 .findByProviderProfileOrderByCreatedAtDesc(profile)
                 .stream()
-                .map(MatchingRequestResponse::new)
+                .map(responseFactory::from)
                 .toList();
 
         return ResponseUtil.success(requests, "Case requests retrieved", HttpStatus.OK);

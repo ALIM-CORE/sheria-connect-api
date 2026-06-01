@@ -20,11 +20,23 @@ public class MatchingRequestResponse {
     private final String notes;
     private final Instant createdAt;
     private final Instant updatedAt;
+    private final ProviderAcceptedCaseDetailResponse acceptedCaseDetail;
 
     public MatchingRequestResponse(CaseMatchRequest matchRequest) {
+        this(matchRequest, true, null);
+    }
+
+    public MatchingRequestResponse(
+            CaseMatchRequest matchRequest,
+            boolean includeReporterIdentity,
+            ProviderAcceptedCaseDetailResponse acceptedCaseDetail
+    ) {
         this.id = matchRequest.getId();
         this.caseNumber = matchRequest.getIncidentReport().getCaseNumber();
-        this.report = new IncidentReportSummaryResponse(matchRequest.getIncidentReport());
+        this.report = new IncidentReportSummaryResponse(
+                matchRequest.getIncidentReport(),
+                includeReporterIdentity
+        );
         this.providerProfile = new ProviderProfileResponse(matchRequest.getProviderProfile());
         this.status = matchRequest.getStatus();
         this.score = matchRequest.getScore();
@@ -38,5 +50,6 @@ public class MatchingRequestResponse {
         this.notes = matchRequest.getNotes();
         this.createdAt = matchRequest.getCreatedAt();
         this.updatedAt = matchRequest.getUpdatedAt();
+        this.acceptedCaseDetail = acceptedCaseDetail;
     }
 }

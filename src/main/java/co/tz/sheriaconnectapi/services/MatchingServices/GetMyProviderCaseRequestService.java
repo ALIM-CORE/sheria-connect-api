@@ -14,9 +14,14 @@ public class GetMyProviderCaseRequestService
         implements Query<UpdateMatchingRequestStatusInput, MatchingRequestResponse> {
 
     private final ProviderCaseRequestAccessService accessService;
+    private final ProviderMatchingRequestResponseFactory responseFactory;
 
-    public GetMyProviderCaseRequestService(ProviderCaseRequestAccessService accessService) {
+    public GetMyProviderCaseRequestService(
+            ProviderCaseRequestAccessService accessService,
+            ProviderMatchingRequestResponseFactory responseFactory
+    ) {
         this.accessService = accessService;
+        this.responseFactory = responseFactory;
     }
 
     @Override
@@ -24,7 +29,7 @@ public class GetMyProviderCaseRequestService
             UpdateMatchingRequestStatusInput input
     ) {
         return ResponseUtil.success(
-                new MatchingRequestResponse(
+                responseFactory.from(
                         accessService.requireMyRequest(input.matchingRequestId(), input.authentication())
                 ),
                 "Case request retrieved",
