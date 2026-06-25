@@ -54,7 +54,7 @@ public class CreateIncidentReportService
         CreateIncidentReportRequest request = input.request();
         validate(request);
 
-        Optional<User> reporter = accessService.authenticatedUser(input.authentication());
+        Optional<User> reporter = accessService.authenticatedCitizenUser(input.authentication());
         String trackingToken = reporter.isPresent()
                 ? null
                 : trackingTokenService.generateToken();

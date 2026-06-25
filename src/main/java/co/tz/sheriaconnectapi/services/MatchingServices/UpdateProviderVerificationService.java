@@ -9,6 +9,8 @@ import co.tz.sheriaconnectapi.model.Entities.ProviderProfile;
 import co.tz.sheriaconnectapi.model.Enums.NotificationType;
 import co.tz.sheriaconnectapi.model.Enums.ProviderVerificationStatus;
 import co.tz.sheriaconnectapi.repositories.ProviderProfileRepository;
+import co.tz.sheriaconnectapi.repositories.UserRepository;
+import co.tz.sheriaconnectapi.exceptions.AccessManagementException;
 import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
@@ -22,13 +24,16 @@ public class UpdateProviderVerificationService
 
     private final ProviderProfileRepository providerProfileRepository;
     private final NotificationDispatchService notificationDispatchService;
+    private final UserRepository userRepository;
 
     public UpdateProviderVerificationService(
             ProviderProfileRepository providerProfileRepository,
-            NotificationDispatchService notificationDispatchService
+            NotificationDispatchService notificationDispatchService,
+            UserRepository userRepository
     ) {
         this.providerProfileRepository = providerProfileRepository;
         this.notificationDispatchService = notificationDispatchService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -42,6 +47,17 @@ public class UpdateProviderVerificationService
         ProviderProfile providerProfile = providerProfileRepository
                 .findById(input.providerProfileId())
                 .orElseThrow(ProviderProfileNotFoundException::new);
+        var actor = input.authentication() == null
+                ? null
+                : userRepository.findByEmail(input.authentication().getName()).orElse(null);
+        if (actor != null
+                && providerProfile.getUser() != null
+                && actor.getId().equals(providerProfile.getUser().getId())) {
+            throw new AccessManagementException(
+                    "You cannot review your own provider verification",
+                    HttpStatus.FORBIDDEN
+            );
+        }
 
         providerProfile.setVerificationStatus(input.request().getVerificationStatus());
         providerProfile.setVerificationRejectionReason(

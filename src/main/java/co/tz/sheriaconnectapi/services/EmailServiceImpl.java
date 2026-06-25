@@ -7,6 +7,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+
 @Service
 public class EmailServiceImpl implements EmailService {
 
@@ -71,5 +73,23 @@ public class EmailServiceImpl implements EmailService {
         );
 
         sendHtmlEmail(toEmail, "Reset your password", html);
+    }
+
+    @Override
+    public void sendStaffInvitation(
+            String toEmail,
+            String name,
+            String invitationLink,
+            Instant expiresAt
+    ) {
+        String html = EmailTemplateBuilder.buildActionEmail(
+                name,
+                "You have been invited to Sheria Connect",
+                "A platform administrator invited you to join the Sheria Connect owner portal.",
+                "Activate Staff Account",
+                invitationLink,
+                "This invitation expires in 48 hours."
+        );
+        sendHtmlEmail(toEmail, "Your Sheria Connect staff invitation", html);
     }
 }

@@ -1,74 +1,55 @@
 package co.tz.sheriaconnectapi.services.AuthServices;
 
 import co.tz.sheriaconnectapi.abstractions.Command;
-import co.tz.sheriaconnectapi.exceptions.InvalidClientTypeException;
 import co.tz.sheriaconnectapi.model.DTOs.LogoutInput;
+import co.tz.sheriaconnectapi.repositories.AuthSessionRepository;
 import co.tz.sheriaconnectapi.repositories.RefreshTokenRepository;
-import co.tz.sheriaconnectapi.security.Jwt.ClientType;
+import co.tz.sheriaconnectapi.security.Jwt.JwtUtil;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class LogoutService implements Command<LogoutInput, Void> {
-
+    private final AuthSessionRepository sessionRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final RefreshTokenCookieService refreshTokenCookieService;
 
     public LogoutService(
+            AuthSessionRepository sessionRepository,
             RefreshTokenRepository refreshTokenRepository,
             RefreshTokenCookieService refreshTokenCookieService
     ) {
+        this.sessionRepository = sessionRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.refreshTokenCookieService = refreshTokenCookieService;
     }
 
-    @Transactional
     @Override
-    public ResponseEntity<StandardResponse<Void>> execute(
-            LogoutInput input
-    ) {
-
-        String clientHeader =
-                input.getRequest().getHeader("X-Client-Type");
-
-        ClientType clientType = ClientType.WEB;
-
-        if (clientHeader != null) {
-            try {
-                clientType = ClientType.valueOf(
-                        clientHeader.toUpperCase()
-                );
-            } catch (IllegalArgumentException e) {
-                throw new InvalidClientTypeException();
+    @Transactional
+    public ResponseEntity<StandardResponse<Void>> execute(LogoutInput input) {
+        input.getResponse().addHeader(
+                HttpHeaders.SET_COOKIE,
+                refreshTokenCookieService.clear()
+        );
+        String authorization = input.getRequest().getHeader(HttpHeaders.AUTHORIZATION);
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            String token = authorization.substring(7);
+            if (JwtUtil.isTokenValid(token)) {
+                String sessionId = JwtUtil.getClaims(token).get("sid", String.class);
+                sessionRepository.findBySessionId(sessionId).ifPresent(session -> {
+                    session.setRevoked(true);
+                    sessionRepository.save(session);
+                    refreshTokenRepository.deleteAllByAuthSession_Id(session.getId());
+                });
             }
         }
-
-        if (clientType == ClientType.WEB) {
-            input.getResponse().addHeader(
-                    HttpHeaders.SET_COOKIE,
-                    refreshTokenCookieService.clear()
-            );
-        }
-
-        if (input.getAuth() != null &&
-                input.getAuth().isAuthenticated() &&
-                !(input.getAuth() instanceof AnonymousAuthenticationToken)) {
-            refreshTokenRepository.deleteAllByUserEmail(input.getAuth().getName());
-        }
-
         SecurityContextHolder.clearContext();
-
-        return ResponseUtil.success(
-                null,
-                "Logout successful",
-                HttpStatus.OK
-        );
+        return ResponseUtil.success(null, "Logout successful", HttpStatus.OK);
     }
 }

@@ -26,17 +26,20 @@ public class ResetPasswordService
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthSessionService authSessionService;
 
     public ResetPasswordService(
             PasswordResetTokenRepository tokenRepository,
             UserRepository userRepository,
             RefreshTokenRepository refreshTokenRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            AuthSessionService authSessionService
     ) {
         this.tokenRepository = tokenRepository;
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
+        this.authSessionService = authSessionService;
     }
 
     @Transactional
@@ -60,6 +63,7 @@ public class ResetPasswordService
 
         // 🔐 Invalidate all sessions (force re-login everywhere)
         refreshTokenRepository.deleteAllByUserId(user.getId());
+        authSessionService.revokeAll(user.getId());
 
         tokenRepository.delete(token);
 

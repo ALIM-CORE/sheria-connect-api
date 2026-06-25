@@ -111,6 +111,7 @@ public class UpdateIncidentReportStatusService
         IncidentReport report = incidentReportRepository
                 .findByCaseNumber(input.caseNumber())
                 .orElseThrow(IncidentReportNotFoundException::new);
+        accessService.assertStaffNotSelf(report, input.authentication());
 
         IncidentReportStatus oldStatus = report.getStatus();
         IncidentReportStatus newStatus = request.getStatus();

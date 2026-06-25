@@ -16,4 +16,5 @@ public interface PublicStoryRepository extends JpaRepository<PublicStory, Long>,
     List<PublicStory> findByAuthorUserOrderByCreatedAtDesc(User authorUser);
     boolean existsByPublicId(String publicId);
     long countByModerationStatus(StoryModerationStatus moderationStatus);
+    long countByAuthorUser(User authorUser);
 }

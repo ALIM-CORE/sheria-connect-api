@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
 
@@ -16,6 +17,24 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     Optional<RefreshToken> findByToken(String token);
 
     void deleteAllByUserId(Long userId);
+
+    void deleteAllByAuthSession_Id(Long authSessionId);
+
+    @Modifying
+    @Query("UPDATE RefreshToken rt SET rt.revoked = true WHERE rt.user.id = :userId")
+    void revokeAllByUserId(@Param("userId") Long userId);
+
+    @Modifying
+    @Query("""
+            UPDATE RefreshToken rt
+               SET rt.revoked = true
+             WHERE rt.user.id = :userId
+               AND rt.authSession.activeContext = :context
+            """)
+    void revokeAllByUserIdAndContext(
+            @Param("userId") Long userId,
+            @Param("context") AccessContext context
+    );
 
     @Modifying
     @Query("DELETE FROM RefreshToken rt WHERE rt.user.email = :email")

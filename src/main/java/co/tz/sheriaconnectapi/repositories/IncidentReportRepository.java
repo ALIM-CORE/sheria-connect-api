@@ -18,4 +18,6 @@ public interface IncidentReportRepository extends JpaRepository<IncidentReport, 
     List<IncidentReport> findByReporterUserOrderByCreatedAtDesc(User reporterUser);
 
     List<IncidentReport> findAllByOrderByCreatedAtDesc();
+
+    long countByReporterUser(User reporterUser);
 }

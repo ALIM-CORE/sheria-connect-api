@@ -53,6 +53,8 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .withUsername(user.getEmail())
                 .password(user.getPassword())
                 .authorities(grantedAuthorities)
+                .disabled(!Boolean.TRUE.equals(user.getActive()))
+                .accountLocked(Boolean.TRUE.equals(user.getLocked()))
                 .build();
     }
 }

@@ -47,6 +47,7 @@ public class CreateAdminCaseNoteService
         IncidentReport report = incidentReportRepository
                 .findByCaseNumber(input.caseNumber())
                 .orElseThrow(IncidentReportNotFoundException::new);
+        accessService.assertStaffNotSelf(report, input.authentication());
         User adminUser = accessService.authenticatedUser(input.authentication())
                 .orElse(null);
 

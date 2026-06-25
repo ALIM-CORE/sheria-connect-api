@@ -8,6 +8,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import co.tz.sheriaconnectapi.security.Access.SessionAuthenticationDetails;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 
 @Service
 public class StoryAccessService {
@@ -21,6 +23,10 @@ public class StoryAccessService {
     public Optional<User> authenticatedUser(Authentication authentication) {
         if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
             return Optional.empty();
+        }
+        if (authentication.getDetails() instanceof SessionAuthenticationDetails details
+                && details.context() != AccessContext.CITIZEN) {
+            throw new UnauthorizedStoryAccessException();
         }
 
         return userRepository.findByEmail(authentication.getName());

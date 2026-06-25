@@ -8,6 +8,7 @@ import lombok.Setter;
 public class UserLoginDTO {
     private String email;
     private String password;
+    private String invitationToken;
 
     public UserLoginDTO(String email, String password) {
         this.email = email;

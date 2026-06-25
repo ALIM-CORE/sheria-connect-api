@@ -1,5 +1,7 @@
 package co.tz.sheriaconnectapi.services;
 
+import java.time.Instant;
+
 public interface EmailService {
 
     void sendEmailVerification(
@@ -12,5 +14,12 @@ public interface EmailService {
             String toEmail,
             String name,
             String resetLink
+    );
+
+    void sendStaffInvitation(
+            String toEmail,
+            String name,
+            String invitationLink,
+            Instant expiresAt
     );
 }

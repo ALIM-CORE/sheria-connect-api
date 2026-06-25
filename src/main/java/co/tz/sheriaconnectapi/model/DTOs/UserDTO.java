@@ -11,6 +11,10 @@ import lombok.Setter;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import co.tz.sheriaconnectapi.model.Enums.UserAccountType;
+import java.time.Instant;
+import co.tz.sheriaconnectapi.security.Access.EffectiveAccess;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 
 @Getter
 @Setter
@@ -27,7 +31,13 @@ public class UserDTO {
     @JsonIgnore
     private String password;
     private List<String> roles;
+    private List<String> roleDisplayNames;
     private List<String> authorities;
+    private UserAccountType accountType;
+    private boolean active;
+    private boolean locked;
+    private Instant lastLoginAt;
+    private AccessContext activeContext;
 
 
     public UserDTO(User user) {
@@ -39,13 +49,48 @@ public class UserDTO {
                 .distinct()
                 .sorted()
                 .toList();
+        this.roleDisplayNames = user.getRoles().stream()
+                .map(role -> role.getDisplayName())
+                .distinct()
+                .sorted()
+                .toList();
         this.authorities = user.getRoles().stream()
                 .flatMap(role -> role.getAuthorities().stream())
                 .map(authority -> authority.getName())
                 .distinct()
                 .sorted()
                 .toList();
+        this.accountType = user.getAccountType();
+        this.active = Boolean.TRUE.equals(user.getActive());
+        this.locked = Boolean.TRUE.equals(user.getLocked());
+        this.lastLoginAt = user.getLastLoginAt();
 
+    }
+
+    public UserDTO(User user, EffectiveAccess access) {
+        this.id = user.getId();
+        this.name = user.getName();
+        this.email = user.getEmail();
+        this.roles = access.roles().stream()
+                .map(role -> role.getName())
+                .distinct()
+                .sorted()
+                .toList();
+        this.roleDisplayNames = access.roles().stream()
+                .map(role -> role.getDisplayName())
+                .distinct()
+                .sorted()
+                .toList();
+        this.authorities = access.authorities().stream()
+                .map(authority -> authority.getAuthority())
+                .distinct()
+                .sorted()
+                .toList();
+        this.accountType = user.getAccountType();
+        this.active = Boolean.TRUE.equals(user.getActive());
+        this.locked = Boolean.TRUE.equals(user.getLocked());
+        this.lastLoginAt = user.getLastLoginAt();
+        this.activeContext = access.context();
     }
 
 
@@ -59,12 +104,21 @@ public class UserDTO {
                 .distinct()
                 .sorted()
                 .toList();
+        this.roleDisplayNames = user.get().getRoles().stream()
+                .map(role -> role.getDisplayName())
+                .distinct()
+                .sorted()
+                .toList();
         this.authorities = user.get().getRoles().stream()
                 .flatMap(role -> role.getAuthorities().stream())
                 .map(authority -> authority.getName())
                 .distinct()
                 .sorted()
                 .toList();
+        this.accountType = user.get().getAccountType();
+        this.active = Boolean.TRUE.equals(user.get().getActive());
+        this.locked = Boolean.TRUE.equals(user.get().getLocked());
+        this.lastLoginAt = user.get().getLastLoginAt();
 
     }
 

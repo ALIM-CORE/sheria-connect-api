@@ -4,12 +4,15 @@ import co.tz.sheriaconnectapi.abstractions.Command;
 import co.tz.sheriaconnectapi.exceptions.ErrorMessages;
 import co.tz.sheriaconnectapi.exceptions.InvalidTokenException;
 import co.tz.sheriaconnectapi.exceptions.WebPortalAccessDeniedException;
-import co.tz.sheriaconnectapi.model.DTOs.UserDTO;
 import co.tz.sheriaconnectapi.model.DTOs.RefreshInput;
 import co.tz.sheriaconnectapi.model.DTOs.RefreshTokenRequest;
+import co.tz.sheriaconnectapi.model.DTOs.UserDTO;
+import co.tz.sheriaconnectapi.model.Entities.AuthSession;
 import co.tz.sheriaconnectapi.model.Entities.RefreshToken;
 import co.tz.sheriaconnectapi.model.Entities.User;
+import co.tz.sheriaconnectapi.repositories.AuthSessionRepository;
 import co.tz.sheriaconnectapi.repositories.RefreshTokenRepository;
+import co.tz.sheriaconnectapi.security.Access.ScopedAuthorityService;
 import co.tz.sheriaconnectapi.security.Jwt.ClientType;
 import co.tz.sheriaconnectapi.security.Jwt.JwtUtil;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
@@ -19,184 +22,118 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class RefreshService implements Command<RefreshInput, Map<String, Object>> {
-    private static final int WEB_REFRESH_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
-
     private final RefreshTokenRepository refreshTokenRepository;
+    private final AuthSessionRepository authSessionRepository;
     private final RefreshTokenCookieService refreshTokenCookieService;
-    private final WebPortalAccessService webPortalAccessService;
+    private final ScopedAuthorityService authorityService;
 
     public RefreshService(
             RefreshTokenRepository refreshTokenRepository,
+            AuthSessionRepository authSessionRepository,
             RefreshTokenCookieService refreshTokenCookieService,
-            WebPortalAccessService webPortalAccessService
+            ScopedAuthorityService authorityService
     ) {
         this.refreshTokenRepository = refreshTokenRepository;
+        this.authSessionRepository = authSessionRepository;
         this.refreshTokenCookieService = refreshTokenCookieService;
-        this.webPortalAccessService = webPortalAccessService;
+        this.authorityService = authorityService;
     }
 
-    private String extractRefreshToken(
-            HttpServletRequest request,
-            RefreshTokenRequest body
-    ) {
-        // 1️⃣ Try cookie (WEB)
+    private String extractRefreshToken(HttpServletRequest request, RefreshTokenRequest body) {
         String cookieToken = Arrays.stream(
-                        Optional.ofNullable(request.getCookies())
-                                .orElse(new Cookie[0])
+                        Optional.ofNullable(request.getCookies()).orElse(new Cookie[0])
                 )
-                .filter(c -> c.getName().equals("refresh_token"))
+                .filter(cookie -> cookie.getName().equals("refresh_token"))
                 .map(Cookie::getValue)
                 .findFirst()
                 .orElse(null);
-
         if (cookieToken != null) {
             return cookieToken;
         }
-
-        // 2️⃣ Try request body (MOBILE)
-        if (body != null && body.getRefreshToken() != null) {
-            return body.getRefreshToken();
-        }
-
-        return null;
-    }
-
-    public static void storeNewRefreshToken(
-            User user,
-            ClientType clientType,
-            String token,
-            RefreshTokenRepository refreshTokenRepository
-    ) {
-        RefreshToken entity = new RefreshToken();
-        entity.setToken(token);
-        entity.setUser(user);
-        entity.setClientType(clientType);
-        entity.setExpiryDate(
-                Instant.now().plusMillis(
-                        clientType == ClientType.MOBILE
-                                ? 30L * 24 * 60 * 60 * 1000
-                                : 7L * 24 * 60 * 60 * 1000
-                )
-        );
-        refreshTokenRepository.save(entity);
+        return body == null ? null : body.getRefreshToken();
     }
 
     @Override
     @Transactional
-    public ResponseEntity<StandardResponse<Map<String, Object>>> execute(
-            RefreshInput input
-    ) {
-
-        // 1️⃣ Extract refresh token
-        String tokenValue = extractRefreshToken(
-                input.getRequest(),
-                input.getBody()
-        );
-
+    public ResponseEntity<StandardResponse<Map<String, Object>>> execute(RefreshInput input) {
+        String tokenValue = extractRefreshToken(input.getRequest(), input.getBody());
         if (tokenValue == null) {
-            throw new InvalidTokenException(
-                    ErrorMessages.MISSING_TOKEN.getMessage()
-            );
+            throw new InvalidTokenException(ErrorMessages.MISSING_TOKEN.getMessage());
         }
 
-        // 2️⃣ Validate token existence
         RefreshToken storedToken = refreshTokenRepository.findByToken(tokenValue)
-                .orElseThrow(() ->
-                        new InvalidTokenException(
-                                ErrorMessages.INVALID_TOKEN.getMessage()
-                        )
-                );
-
-        // 3️⃣ Check expiration / revocation
-        if (storedToken.getExpiryDate().isBefore(Instant.now())) {
-            refreshTokenRepository.deleteAllByUserId(
-                    storedToken.getUser().getId()
-            );
-
-            throw new InvalidTokenException(
-                    ErrorMessages.INVALID_TOKEN.getMessage()
-            );
-        }
-
-        if (storedToken.isRevoked()) {
-            throw new InvalidTokenException(
-                    ErrorMessages.INVALID_TOKEN.getMessage()
-            );
+                .orElseThrow(() -> new InvalidTokenException(ErrorMessages.INVALID_TOKEN.getMessage()));
+        AuthSession session = storedToken.getAuthSession();
+        if (storedToken.isRevoked()
+                || storedToken.getExpiryDate().isBefore(Instant.now())
+                || session == null
+                || session.isRevoked()
+                || session.getExpiresAt().isBefore(Instant.now())) {
+            throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN.getMessage());
         }
 
         User user = storedToken.getUser();
-        ClientType clientType = storedToken.getClientType();
-
-        if (clientType == ClientType.WEB && !webPortalAccessService.canAccessWebPortal(user)) {
+        if (!Boolean.TRUE.equals(user.getActive()) || Boolean.TRUE.equals(user.getLocked())) {
+            session.setRevoked(true);
+            authSessionRepository.save(session);
             storedToken.setRevoked(true);
             refreshTokenRepository.save(storedToken);
+            throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN.getMessage());
+        }
+        if (session.getActiveContext() == co.tz.sheriaconnectapi.model.Enums.AccessContext.STAFF
+                && !session.isMfaVerified()) {
             throw new WebPortalAccessDeniedException();
         }
 
-        // 4️⃣ Rotate old refresh token
+        var effectiveAccess = authorityService.resolve(user, session.getActiveContext());
+        if (effectiveAccess.roles().isEmpty()) {
+            session.setRevoked(true);
+            authSessionRepository.save(session);
+            storedToken.setRevoked(true);
+            refreshTokenRepository.save(storedToken);
+            throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN.getMessage());
+        }
+
         storedToken.setRevoked(true);
         refreshTokenRepository.save(storedToken);
+        session.setLastActivityAt(Instant.now());
+        authSessionRepository.save(session);
 
-        // 5️⃣ Build authorities
-        var authorities = user.getRoles().stream()
-                .flatMap(role -> role.getAuthorities().stream())
-                .map(a -> new SimpleGrantedAuthority(a.getName()))
-                .collect(Collectors.toSet());
+        String newAccessToken = JwtUtil.generateAccessToken(user, session);
+        String newRefreshToken = JwtUtil.generateRefreshToken(user, session);
+        RefreshToken replacement = new RefreshToken();
+        replacement.setToken(newRefreshToken);
+        replacement.setUser(user);
+        replacement.setAuthSession(session);
+        replacement.setClientType(session.getClientType());
+        replacement.setExpiryDate(session.getExpiresAt());
+        refreshTokenRepository.save(replacement);
 
-        var userDetails = org.springframework.security.core.userdetails.User
-                .withUsername(user.getEmail())
-                .password(user.getPassword())
-                .authorities(authorities)
-                .build();
-
-        // 6️⃣ Generate new tokens
-        String newAccessToken =
-                JwtUtil.generateAccessToken(userDetails, clientType);
-
-        String newRefreshToken =
-                JwtUtil.generateRefreshToken(userDetails, clientType);
-
-        storeNewRefreshToken(
-                user,
-                clientType,
-                newRefreshToken,
-                refreshTokenRepository
-        );
-
-        // 7️⃣ WEB → set HttpOnly cookie
-        if (clientType == ClientType.WEB) {
+        if (session.getClientType() == ClientType.WEB) {
             input.getResponse().addHeader(
                     HttpHeaders.SET_COOKIE,
-                    refreshTokenCookieService.create(
-                            newRefreshToken,
-                            java.time.Duration.ofSeconds(WEB_REFRESH_COOKIE_MAX_AGE_SECONDS)
-                    )
+                    refreshTokenCookieService.create(newRefreshToken, Duration.ofDays(7))
             );
         }
 
-        // 8️⃣ Build response body
-        Map<String, Object> bodyResponse = new HashMap<>();
-        bodyResponse.put("access", newAccessToken);
-        bodyResponse.put("user", new UserDTO(user));
-
-        if (clientType == ClientType.MOBILE) {
-            bodyResponse.put("refresh", newRefreshToken);
+        Map<String, Object> body = new HashMap<>();
+        body.put("access", newAccessToken);
+        body.put("user", new UserDTO(user, effectiveAccess));
+        if (session.getClientType() == ClientType.MOBILE) {
+            body.put("refresh", newRefreshToken);
         }
-
-        return ResponseUtil.success(
-                bodyResponse,
-                "Token refreshed successfully",
-                HttpStatus.OK
-        );
+        return ResponseUtil.success(body, "Token refreshed successfully", HttpStatus.OK);
     }
 }

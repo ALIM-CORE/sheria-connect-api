@@ -22,8 +22,8 @@ public class StoryModerationNote {
     @JoinColumn(name = "story_id", nullable = false)
     private PublicStory story;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "admin_user_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "admin_user_id", nullable = false)
     private User adminUser;
 
     @Column(nullable = false, columnDefinition = "TEXT")

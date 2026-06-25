@@ -26,6 +26,7 @@ public class AuthController {
     private final RegisterService registerService;
     private final RegisterProviderService registerProviderService;
     private final ResendVerificationEmailService resendVerificationEmailService;
+    private final StaffMfaService staffMfaService;
 
     public AuthController(
             LoginService loginService,
@@ -36,7 +37,8 @@ public class AuthController {
             ResetPasswordService resetPasswordService,
             RegisterService registerService,
             RegisterProviderService registerProviderService,
-            ResendVerificationEmailService resendVerificationEmailService
+            ResendVerificationEmailService resendVerificationEmailService,
+            StaffMfaService staffMfaService
     ) {
         this.loginService = loginService;
         this.refreshService = refreshService;
@@ -47,6 +49,7 @@ public class AuthController {
         this.registerService = registerService;
         this.registerProviderService = registerProviderService;
         this.resendVerificationEmailService = resendVerificationEmailService;
+        this.staffMfaService = staffMfaService;
     }
 
     @PostMapping("/login")
@@ -122,6 +125,29 @@ public class AuthController {
             @RequestBody ResendVerificationEmailDTO dto
     ) {
         return resendVerificationEmailService.execute(dto);
+    }
+
+    @PostMapping("/mfa/setup")
+    public ResponseEntity<StandardResponse<MfaSetupResponse>> setupMfa(
+            @RequestBody MfaCodeRequest request
+    ) {
+        return staffMfaService.setup(request.challengeToken());
+    }
+
+    @PostMapping("/mfa/setup/confirm")
+    public ResponseEntity<StandardResponse<LoginResponse>> confirmMfaSetup(
+            @RequestBody MfaCodeRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        return staffMfaService.confirmSetup(request, servletRequest);
+    }
+
+    @PostMapping("/mfa/verify")
+    public ResponseEntity<StandardResponse<LoginResponse>> verifyMfa(
+            @RequestBody MfaCodeRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        return staffMfaService.verify(request, servletRequest);
     }
 
 

@@ -1,42 +1,44 @@
 package co.tz.sheriaconnectapi.security.Jwt;
 
+import co.tz.sheriaconnectapi.model.Entities.AuthSession;
+import co.tz.sheriaconnectapi.model.Entities.User;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
+import co.tz.sheriaconnectapi.repositories.AuthSessionRepository;
+import co.tz.sheriaconnectapi.repositories.UserRepository;
+import co.tz.sheriaconnectapi.security.Access.ScopedAuthorityService;
+import co.tz.sheriaconnectapi.security.Access.SessionAuthenticationDetails;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.filter.OncePerRequestFilter;
-import co.tz.sheriaconnectapi.model.Entities.User;
-import co.tz.sheriaconnectapi.repositories.UserRepository;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-
     private final UserRepository userRepository;
+    private final AuthSessionRepository sessionRepository;
+    private final ScopedAuthorityService authorityService;
 
-    public JwtAuthenticationFilter(UserRepository userRepository) {
+    public JwtAuthenticationFilter(
+            UserRepository userRepository,
+            AuthSessionRepository sessionRepository,
+            ScopedAuthorityService authorityService
+    ) {
         this.userRepository = userRepository;
+        this.sessionRepository = sessionRepository;
+        this.authorityService = authorityService;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        System.out.println(path);
-        return path.endsWith("/user")
-                || path.equals("/auth/login")
-                || path.equals("/auth/register")
-                || path.startsWith("/public")
-                || path.equals("/login")
-                || path.equals("/admin/login")
-                || path.startsWith("/auth/");
+        return path.startsWith("/auth/");
     }
 
     @Override
@@ -45,47 +47,96 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-
         String authHeader = request.getHeader("Authorization");
-
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String token = authHeader.substring(7);
-
         if (!JwtUtil.isTokenValid(token)) {
             filterChain.doFilter(request, response);
             return;
         }
 
         Claims claims = JwtUtil.getClaims(token);
-        String email = claims.getSubject();
+        Long userId;
+        AccessContext context;
+        String sessionId;
+        Set<String> audiences;
+        Boolean mfaVerified;
+        try {
+            userId = Long.valueOf(claims.getSubject());
+            context = AccessContext.valueOf(claims.get("active_context", String.class));
+            sessionId = claims.get("sid", String.class);
+            audiences = claims.getAudience();
+            mfaVerified = claims.get("mfa_verified", Boolean.class);
+        } catch (RuntimeException exception) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() ->
-                        new UsernameNotFoundException("User not found: " + email)
-                );
+        AuthSession session = sessionRepository.findBySessionId(sessionId).orElse(null);
+        User user = userRepository.findDetailedById(userId).orElse(null);
+        if (session == null
+                || user == null
+                || session.isRevoked()
+                || session.getExpiresAt().isBefore(Instant.now())
+                || !session.getUser().getId().equals(userId)
+                || session.getActiveContext() != context
+                || audiences == null
+                || !audiences.contains(session.getAudience())
+                || !Boolean.TRUE.equals(user.getActive())
+                || Boolean.TRUE.equals(user.getLocked())
+                || (context == AccessContext.STAFF
+                    && (!session.isMfaVerified() || !Boolean.TRUE.equals(mfaVerified)))) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-        // Flatten: User → Roles → Authorities
-        Set<SimpleGrantedAuthority> grantedAuthorities =
-                user.getRoles().stream()
-                        .flatMap(role -> role.getAuthorities().stream())
-                        .map(authority ->
-                                new SimpleGrantedAuthority(authority.getName())
-                        )
-                        .collect(Collectors.toSet());
+        if (!contextAllowedForPath(context, request.getRequestURI())) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
 
-        Authentication authentication =
+        var effectiveAccess = authorityService.resolve(user, context);
+        if (effectiveAccess.roles().isEmpty()) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
-                        email,
+                        user.getEmail(),
                         null,
-                        grantedAuthorities
+                        effectiveAccess.authorities()
                 );
-
+        authentication.setDetails(new SessionAuthenticationDetails(
+                sessionId,
+                context,
+                session.getAudience(),
+                session.isMfaVerified()
+        ));
         SecurityContextHolder.getContext().setAuthentication(authentication);
-
+        session.setLastActivityAt(Instant.now());
+        sessionRepository.save(session);
         filterChain.doFilter(request, response);
+    }
+
+    private boolean contextAllowedForPath(AccessContext context, String path) {
+        if (path.startsWith("/admin/")) {
+            return context == AccessContext.STAFF;
+        }
+        if (path.startsWith("/provider-profile")
+                || path.startsWith("/provider/")) {
+            return context == AccessContext.PROVIDER;
+        }
+        if (path.equals("/incident-reports/mine")
+                || (path.startsWith("/incident-reports/") && path.endsWith("/messages"))
+                || path.equals("/stories/mine")
+                || path.equals("/stories/bookmarks")) {
+            return context == AccessContext.CITIZEN;
+        }
+        return true;
     }
 }

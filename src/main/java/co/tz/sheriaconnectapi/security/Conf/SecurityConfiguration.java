@@ -18,6 +18,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import co.tz.sheriaconnectapi.repositories.UserRepository;
 import co.tz.sheriaconnectapi.security.Jwt.JwtAuthenticationFilter;
 import co.tz.sheriaconnectapi.security.UserDetails.CustomUserDetailsService;
+import co.tz.sheriaconnectapi.repositories.AuthSessionRepository;
+import co.tz.sheriaconnectapi.security.Access.ScopedAuthorityService;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -31,10 +33,19 @@ public class SecurityConfiguration {
 
     private final UserRepository userRepository;
     private final CustomUserDetailsService userDetailsService;
+    private final AuthSessionRepository authSessionRepository;
+    private final ScopedAuthorityService scopedAuthorityService;
 
-    public SecurityConfiguration(UserRepository userRepository, CustomUserDetailsService userDetailsService) {
+    public SecurityConfiguration(
+            UserRepository userRepository,
+            CustomUserDetailsService userDetailsService,
+            AuthSessionRepository authSessionRepository,
+            ScopedAuthorityService scopedAuthorityService
+    ) {
         this.userRepository = userRepository;
         this.userDetailsService = userDetailsService;
+        this.authSessionRepository = authSessionRepository;
+        this.scopedAuthorityService = scopedAuthorityService;
     }
 
     // AuthenticationManager is now obtained via AuthenticationConfiguration
@@ -68,9 +79,10 @@ public class SecurityConfiguration {
                 .cors(cors -> {})
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/user").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET,"/auth/verify-email").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/auth/staff-invitations/validate").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/staff-invitations/accept").permitAll()
                         .requestMatchers("/auth/login", "/auth/refresh", "/auth/logout", "/auth/register", "/auth/password-reset/request", "/auth/password-reset/confirm").permitAll()
                         .requestMatchers("/admin/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/incident-reports/mine").authenticated()
@@ -96,6 +108,10 @@ public class SecurityConfiguration {
 
     @Bean
     public JwtAuthenticationFilter authenticationJwtFilter() {
-        return new JwtAuthenticationFilter(userRepository);
+        return new JwtAuthenticationFilter(
+                userRepository,
+                authSessionRepository,
+                scopedAuthorityService
+        );
     }
 }

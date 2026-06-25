@@ -101,10 +101,11 @@ public class AdminMatchingController {
     @PreAuthorize("hasAuthority('PROVIDERPROFILE_UPDATE')")
     public ResponseEntity<StandardResponse<ProviderProfileResponse>> updateProviderVerification(
             @PathVariable Long providerProfileId,
-            @RequestBody UpdateProviderVerificationRequest request
+            @RequestBody UpdateProviderVerificationRequest request,
+            org.springframework.security.core.Authentication authentication
     ) {
         return updateProviderVerificationService.execute(
-                new UpdateProviderVerificationInput(providerProfileId, request)
+                new UpdateProviderVerificationInput(providerProfileId, request, authentication)
         );
     }
 

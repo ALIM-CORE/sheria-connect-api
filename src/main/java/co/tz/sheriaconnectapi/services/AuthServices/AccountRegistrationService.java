@@ -5,9 +5,14 @@ import co.tz.sheriaconnectapi.exceptions.UserNotValidException;
 import co.tz.sheriaconnectapi.model.Entities.EmailVerificationToken;
 import co.tz.sheriaconnectapi.model.Entities.Role;
 import co.tz.sheriaconnectapi.model.Entities.User;
+import co.tz.sheriaconnectapi.model.Enums.UserAccountType;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
+import co.tz.sheriaconnectapi.model.Enums.RoleAssignmentStatus;
+import co.tz.sheriaconnectapi.model.Entities.UserRoleAssignment;
 import co.tz.sheriaconnectapi.repositories.EmailVerificationTokenRepository;
 import co.tz.sheriaconnectapi.repositories.RoleRepository;
 import co.tz.sheriaconnectapi.repositories.UserRepository;
+import co.tz.sheriaconnectapi.repositories.UserRoleAssignmentRepository;
 import co.tz.sheriaconnectapi.services.EmailService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,6 +31,7 @@ public class AccountRegistrationService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final UserRoleAssignmentRepository assignmentRepository;
 
     @Value("${app.frontend.base-url}")
     private String backendBaseUrl;
@@ -38,13 +44,15 @@ public class AccountRegistrationService {
             EmailVerificationTokenRepository tokenRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
-            EmailService emailService
+            EmailService emailService,
+            UserRoleAssignmentRepository assignmentRepository
     ) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.assignmentRepository = assignmentRepository;
     }
 
     public User register(User user, String roleName) {
@@ -56,10 +64,29 @@ public class AccountRegistrationService {
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setEmailVerified(false);
-        roleRepository.findByName(roleName)
-                .ifPresent(role -> user.getRoles().add(role));
+        user.setAccountType("PROVIDER".equals(roleName)
+                ? UserAccountType.PROVIDER
+                : UserAccountType.CITIZEN);
+        user.setActive(true);
+        user.setLocked(false);
+        Role identityRole = roleRepository.findByName(roleName).orElse(null);
+        if (identityRole != null) {
+            user.getRoles().add(identityRole);
+        }
 
         User savedUser = userRepository.save(user);
+        if (identityRole != null) {
+            UserRoleAssignment assignment = new UserRoleAssignment();
+            assignment.setUser(savedUser);
+            assignment.setRole(identityRole);
+            assignment.setContext("PROVIDER".equals(roleName)
+                    ? AccessContext.PROVIDER
+                    : AccessContext.CITIZEN);
+            assignment.setStatus(RoleAssignmentStatus.ACTIVE);
+            assignment.setActivatedAt(Instant.now());
+            assignment.setReason("Created during account registration");
+            assignmentRepository.save(assignment);
+        }
         tokenRepository.deleteByUserId(savedUser.getId());
         EmailVerificationToken token = createVerificationToken(savedUser);
         tokenRepository.save(token);

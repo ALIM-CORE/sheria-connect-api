@@ -38,7 +38,9 @@ public class GetIncidentReportService
                 .findByCaseNumber(input.caseNumber())
                 .orElseThrow(IncidentReportNotFoundException::new);
 
-        if (!input.adminAccess()) {
+        if (input.adminAccess()) {
+            accessService.assertStaffNotSelf(report, input.authentication());
+        } else {
             accessService.assertCitizenAccess(
                     report,
                     input.authentication(),

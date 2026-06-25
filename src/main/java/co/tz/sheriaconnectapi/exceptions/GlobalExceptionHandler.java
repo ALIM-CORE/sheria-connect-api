@@ -13,6 +13,13 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(AccessManagementException.class)
+    public ResponseEntity<StandardResponse<Void>> handleAccessManagement(
+            AccessManagementException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), ex.getStatus());
+    }
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<StandardResponse<Void>> handleUserNotFoundException(
             UserNotFoundException ex
