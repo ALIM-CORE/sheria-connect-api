@@ -20,6 +20,8 @@ import co.tz.sheriaconnectapi.security.Jwt.JwtAuthenticationFilter;
 import co.tz.sheriaconnectapi.security.UserDetails.CustomUserDetailsService;
 import co.tz.sheriaconnectapi.repositories.AuthSessionRepository;
 import co.tz.sheriaconnectapi.security.Access.ScopedAuthorityService;
+import co.tz.sheriaconnectapi.security.Handlers.ApiAccessDeniedHandler;
+import co.tz.sheriaconnectapi.security.Handlers.ApiAuthenticationEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -35,17 +37,23 @@ public class SecurityConfiguration {
     private final CustomUserDetailsService userDetailsService;
     private final AuthSessionRepository authSessionRepository;
     private final ScopedAuthorityService scopedAuthorityService;
+    private final ApiAuthenticationEntryPoint authenticationEntryPoint;
+    private final ApiAccessDeniedHandler accessDeniedHandler;
 
     public SecurityConfiguration(
             UserRepository userRepository,
             CustomUserDetailsService userDetailsService,
             AuthSessionRepository authSessionRepository,
-            ScopedAuthorityService scopedAuthorityService
+            ScopedAuthorityService scopedAuthorityService,
+            ApiAuthenticationEntryPoint authenticationEntryPoint,
+            ApiAccessDeniedHandler accessDeniedHandler
     ) {
         this.userRepository = userRepository;
         this.userDetailsService = userDetailsService;
         this.authSessionRepository = authSessionRepository;
         this.scopedAuthorityService = scopedAuthorityService;
+        this.authenticationEntryPoint = authenticationEntryPoint;
+        this.accessDeniedHandler = accessDeniedHandler;
     }
 
     // AuthenticationManager is now obtained via AuthenticationConfiguration
@@ -79,6 +87,7 @@ public class SecurityConfiguration {
                 .cors(cors -> {})
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET,"/auth/verify-email").permitAll()
                         .requestMatchers(HttpMethod.GET, "/auth/staff-invitations/validate").permitAll()
@@ -99,6 +108,10 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/knowledge/articles/*").permitAll()
                         .anyRequest().authenticated()
                 )
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
+                )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(authenticationJwtFilter(), UsernamePasswordAuthenticationFilter.class);
@@ -111,7 +124,9 @@ public class SecurityConfiguration {
         return new JwtAuthenticationFilter(
                 userRepository,
                 authSessionRepository,
-                scopedAuthorityService
+                scopedAuthorityService,
+                authenticationEntryPoint,
+                accessDeniedHandler
         );
     }
 }

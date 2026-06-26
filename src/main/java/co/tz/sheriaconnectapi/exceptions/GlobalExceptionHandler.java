@@ -62,6 +62,13 @@ public class GlobalExceptionHandler {
         return ResponseUtil.error(ex.getMessage(), HttpStatus.UNAUTHORIZED);
     }
 
+    @ExceptionHandler(AuthenticationRequiredException.class)
+    public ResponseEntity<StandardResponse<Void>> handleAuthenticationRequired(
+            AuthenticationRequiredException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.UNAUTHORIZED);
+    }
+
     @ExceptionHandler(WebPortalAccessDeniedException.class)
     public ResponseEntity<StandardResponse<Void>> handleWebPortalAccessDenied(
             WebPortalAccessDeniedException ex
@@ -202,7 +209,8 @@ public class GlobalExceptionHandler {
             UnauthorizedStoryAccessException.class,
             StoryNotPublishedException.class,
             UnauthorizedProviderProfileAccessException.class,
-            CaseMessageAccessDeniedException.class
+            CaseMessageAccessDeniedException.class,
+            NotificationAccessDeniedException.class
     })
     public ResponseEntity<StandardResponse<Void>> handleStoryAccessDenied(
             RuntimeException ex

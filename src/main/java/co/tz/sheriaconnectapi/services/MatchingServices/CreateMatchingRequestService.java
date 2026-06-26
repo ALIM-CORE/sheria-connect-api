@@ -17,11 +17,12 @@ import co.tz.sheriaconnectapi.model.Enums.MatchingRequestStatus;
 import co.tz.sheriaconnectapi.model.Enums.ProviderAvailabilityStatus;
 import co.tz.sheriaconnectapi.model.Enums.ProviderVerificationStatus;
 import co.tz.sheriaconnectapi.model.Enums.NotificationType;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.repositories.CaseMatchRequestRepository;
 import co.tz.sheriaconnectapi.repositories.CaseStatusHistoryRepository;
 import co.tz.sheriaconnectapi.repositories.IncidentReportRepository;
 import co.tz.sheriaconnectapi.repositories.ProviderProfileRepository;
-import co.tz.sheriaconnectapi.services.IncidentReportServices.IncidentReportAccessService;
+import co.tz.sheriaconnectapi.security.Access.AuthenticatedUserResolver;
 import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
@@ -37,7 +38,7 @@ public class CreateMatchingRequestService
     private final ProviderProfileRepository providerProfileRepository;
     private final CaseMatchRequestRepository caseMatchRequestRepository;
     private final CaseStatusHistoryRepository caseStatusHistoryRepository;
-    private final IncidentReportAccessService incidentReportAccessService;
+    private final AuthenticatedUserResolver authenticatedUserResolver;
     private final ProviderMatchingScoreService providerMatchingScoreService;
     private final NotificationDispatchService notificationDispatchService;
 
@@ -46,7 +47,7 @@ public class CreateMatchingRequestService
             ProviderProfileRepository providerProfileRepository,
             CaseMatchRequestRepository caseMatchRequestRepository,
             CaseStatusHistoryRepository caseStatusHistoryRepository,
-            IncidentReportAccessService incidentReportAccessService,
+            AuthenticatedUserResolver authenticatedUserResolver,
             ProviderMatchingScoreService providerMatchingScoreService,
             NotificationDispatchService notificationDispatchService
     ) {
@@ -54,7 +55,7 @@ public class CreateMatchingRequestService
         this.providerProfileRepository = providerProfileRepository;
         this.caseMatchRequestRepository = caseMatchRequestRepository;
         this.caseStatusHistoryRepository = caseStatusHistoryRepository;
-        this.incidentReportAccessService = incidentReportAccessService;
+        this.authenticatedUserResolver = authenticatedUserResolver;
         this.providerMatchingScoreService = providerMatchingScoreService;
         this.notificationDispatchService = notificationDispatchService;
     }
@@ -86,7 +87,7 @@ public class CreateMatchingRequestService
             throw new DuplicateMatchingRequestException();
         }
 
-        User requestedBy = incidentReportAccessService.requireAuthenticatedUser(input.authentication());
+        User requestedBy = authenticatedUserResolver.requireStaffUser(input.authentication());
         ProviderMatchingScore score = providerMatchingScoreService.score(report, providerProfile);
 
         CaseMatchRequest matchRequest = new CaseMatchRequest();
@@ -117,6 +118,7 @@ public class CreateMatchingRequestService
 
         notificationDispatchService.notify(
                 providerProfile.getUser(),
+                AccessContext.PROVIDER,
                 NotificationType.MATCHING_REQUEST_CREATED,
                 "New case request",
                 "A case request is waiting for your review.",

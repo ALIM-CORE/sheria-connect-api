@@ -10,9 +10,11 @@ import co.tz.sheriaconnectapi.model.DTOs.UpdateStoryModerationRequest;
 import co.tz.sheriaconnectapi.model.Entities.PublicStory;
 import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.model.Enums.NotificationType;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.model.Enums.StoryModerationStatus;
 import co.tz.sheriaconnectapi.repositories.PublicStoryRepository;
 import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
+import co.tz.sheriaconnectapi.security.Access.AuthenticatedUserResolver;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -25,18 +27,18 @@ import java.time.Instant;
 public class UpdateStoryModerationService implements Command<UpdateStoryModerationInput, StoryResponse> {
 
     private final PublicStoryRepository publicStoryRepository;
-    private final StoryAccessService storyAccessService;
+    private final AuthenticatedUserResolver authenticatedUserResolver;
     private final StoryResponseFactory storyResponseFactory;
     private final NotificationDispatchService notificationDispatchService;
 
     public UpdateStoryModerationService(
             PublicStoryRepository publicStoryRepository,
-            StoryAccessService storyAccessService,
+            AuthenticatedUserResolver authenticatedUserResolver,
             StoryResponseFactory storyResponseFactory,
             NotificationDispatchService notificationDispatchService
     ) {
         this.publicStoryRepository = publicStoryRepository;
-        this.storyAccessService = storyAccessService;
+        this.authenticatedUserResolver = authenticatedUserResolver;
         this.storyResponseFactory = storyResponseFactory;
         this.notificationDispatchService = notificationDispatchService;
     }
@@ -52,7 +54,7 @@ public class UpdateStoryModerationService implements Command<UpdateStoryModerati
             throw new InvalidStoryContentException("Rejection reason is required");
         }
 
-        User admin = storyAccessService.requireAuthenticatedUser(input.authentication());
+        User admin = authenticatedUserResolver.requireStaffUser(input.authentication());
         PublicStory story = publicStoryRepository.findByPublicId(input.publicId())
                 .orElseThrow(StoryNotFoundException::new);
 
@@ -69,6 +71,7 @@ public class UpdateStoryModerationService implements Command<UpdateStoryModerati
 
         notificationDispatchService.notify(
                 savedStory.getAuthorUser(),
+                AccessContext.CITIZEN,
                 NotificationType.STORY_MODERATION_DECISION,
                 "Story moderation updated",
                 "Your story \"" + savedStory.getTitle() + "\" is now "

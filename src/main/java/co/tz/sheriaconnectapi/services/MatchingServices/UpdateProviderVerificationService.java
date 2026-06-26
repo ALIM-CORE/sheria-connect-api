@@ -7,6 +7,7 @@ import co.tz.sheriaconnectapi.model.DTOs.ProviderProfileResponse;
 import co.tz.sheriaconnectapi.model.DTOs.UpdateProviderVerificationInput;
 import co.tz.sheriaconnectapi.model.Entities.ProviderProfile;
 import co.tz.sheriaconnectapi.model.Enums.NotificationType;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.model.Enums.ProviderVerificationStatus;
 import co.tz.sheriaconnectapi.repositories.ProviderProfileRepository;
 import co.tz.sheriaconnectapi.repositories.UserRepository;
@@ -78,6 +79,7 @@ public class UpdateProviderVerificationService
         ProviderProfile saved = providerProfileRepository.save(providerProfile);
         notificationDispatchService.notify(
                 saved.getUser(),
+                AccessContext.PROVIDER,
                 NotificationType.PROVIDER_VERIFICATION_DECISION,
                 "Provider verification updated",
                 "Your provider profile is now "

@@ -7,12 +7,16 @@ import co.tz.sheriaconnectapi.repositories.AuthSessionRepository;
 import co.tz.sheriaconnectapi.repositories.UserRepository;
 import co.tz.sheriaconnectapi.security.Access.ScopedAuthorityService;
 import co.tz.sheriaconnectapi.security.Access.SessionAuthenticationDetails;
+import co.tz.sheriaconnectapi.security.Handlers.ApiAccessDeniedHandler;
+import co.tz.sheriaconnectapi.security.Handlers.ApiAuthenticationEntryPoint;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -24,15 +28,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
     private final AuthSessionRepository sessionRepository;
     private final ScopedAuthorityService authorityService;
+    private final ApiAuthenticationEntryPoint authenticationEntryPoint;
+    private final ApiAccessDeniedHandler accessDeniedHandler;
 
     public JwtAuthenticationFilter(
             UserRepository userRepository,
             AuthSessionRepository sessionRepository,
-            ScopedAuthorityService authorityService
+            ScopedAuthorityService authorityService,
+            ApiAuthenticationEntryPoint authenticationEntryPoint,
+            ApiAccessDeniedHandler accessDeniedHandler
     ) {
         this.userRepository = userRepository;
         this.sessionRepository = sessionRepository;
         this.authorityService = authorityService;
+        this.authenticationEntryPoint = authenticationEntryPoint;
+        this.accessDeniedHandler = accessDeniedHandler;
     }
 
     @Override
@@ -55,7 +65,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = authHeader.substring(7);
         if (!JwtUtil.isTokenValid(token)) {
-            filterChain.doFilter(request, response);
+            authenticationEntryPoint.commence(
+                    request,
+                    response,
+                    new BadCredentialsException("Invalid or expired access token")
+            );
             return;
         }
 
@@ -72,7 +86,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             audiences = claims.getAudience();
             mfaVerified = claims.get("mfa_verified", Boolean.class);
         } catch (RuntimeException exception) {
-            filterChain.doFilter(request, response);
+            authenticationEntryPoint.commence(
+                    request,
+                    response,
+                    new BadCredentialsException("Invalid access token", exception)
+            );
             return;
         }
 
@@ -90,18 +108,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || Boolean.TRUE.equals(user.getLocked())
                 || (context == AccessContext.STAFF
                     && (!session.isMfaVerified() || !Boolean.TRUE.equals(mfaVerified)))) {
-            filterChain.doFilter(request, response);
+            authenticationEntryPoint.commence(
+                    request,
+                    response,
+                    new BadCredentialsException("Authentication session is invalid or expired")
+            );
             return;
         }
 
         if (!contextAllowedForPath(context, request.getRequestURI())) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            accessDeniedHandler.handle(
+                    request,
+                    response,
+                    new AccessDeniedException("Active context cannot access this resource")
+            );
             return;
         }
 
         var effectiveAccess = authorityService.resolve(user, context);
         if (effectiveAccess.roles().isEmpty()) {
-            filterChain.doFilter(request, response);
+            authenticationEntryPoint.commence(
+                    request,
+                    response,
+                    new BadCredentialsException("No active access assignment")
+            );
             return;
         }
 

@@ -7,6 +7,7 @@ import co.tz.sheriaconnectapi.model.DTOs.CaseMessageResponse;
 import co.tz.sheriaconnectapi.model.Entities.CaseMessage;
 import co.tz.sheriaconnectapi.model.Enums.CaseMessageSenderRole;
 import co.tz.sheriaconnectapi.model.Enums.NotificationType;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.repositories.CaseMessageRepository;
 import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
@@ -52,6 +53,7 @@ public class SendProviderCaseMessageService implements Command<CaseMessageInput,
 
         notificationDispatchService.notify(
                 context.matchRequest().getIncidentReport().getReporterUser(),
+                AccessContext.CITIZEN,
                 NotificationType.CASE_MESSAGE_CREATED,
                 "New provider message",
                 "A provider sent a message on case "

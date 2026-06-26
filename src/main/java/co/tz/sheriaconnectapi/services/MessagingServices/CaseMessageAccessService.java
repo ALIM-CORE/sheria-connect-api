@@ -10,6 +10,7 @@ import co.tz.sheriaconnectapi.repositories.CaseMatchRequestRepository;
 import co.tz.sheriaconnectapi.repositories.IncidentReportRepository;
 import co.tz.sheriaconnectapi.services.IncidentReportServices.IncidentReportAccessService;
 import co.tz.sheriaconnectapi.services.MatchingServices.ProviderCaseRequestAccessService;
+import co.tz.sheriaconnectapi.security.Access.AuthenticatedUserResolver;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -22,21 +23,24 @@ public class CaseMessageAccessService {
     private final CaseMatchRequestRepository caseMatchRequestRepository;
     private final IncidentReportAccessService incidentReportAccessService;
     private final ProviderCaseRequestAccessService providerCaseRequestAccessService;
+    private final AuthenticatedUserResolver authenticatedUserResolver;
 
     public CaseMessageAccessService(
             IncidentReportRepository incidentReportRepository,
             CaseMatchRequestRepository caseMatchRequestRepository,
             IncidentReportAccessService incidentReportAccessService,
-            ProviderCaseRequestAccessService providerCaseRequestAccessService
+            ProviderCaseRequestAccessService providerCaseRequestAccessService,
+            AuthenticatedUserResolver authenticatedUserResolver
     ) {
         this.incidentReportRepository = incidentReportRepository;
         this.caseMatchRequestRepository = caseMatchRequestRepository;
         this.incidentReportAccessService = incidentReportAccessService;
         this.providerCaseRequestAccessService = providerCaseRequestAccessService;
+        this.authenticatedUserResolver = authenticatedUserResolver;
     }
 
     public CitizenMessageContext requireCitizenContext(String caseNumber, Authentication authentication) {
-        User user = incidentReportAccessService.requireAuthenticatedUser(authentication);
+        User user = incidentReportAccessService.requireCitizenUser(authentication);
         IncidentReport report = incidentReportRepository.findByCaseNumber(caseNumber)
                 .orElseThrow(IncidentReportNotFoundException::new);
 
@@ -57,7 +61,7 @@ public class CaseMessageAccessService {
     }
 
     public ProviderMessageContext requireProviderContext(Long matchingRequestId, Authentication authentication) {
-        User user = incidentReportAccessService.requireAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.requireProviderUser(authentication);
         CaseMatchRequest request = providerCaseRequestAccessService
                 .requireMyRequest(matchingRequestId, authentication);
         if (request.getStatus() != MatchingRequestStatus.ACCEPTED) {

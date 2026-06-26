@@ -2,12 +2,13 @@ package co.tz.sheriaconnectapi.services.NotificationServices;
 
 import co.tz.sheriaconnectapi.abstractions.Command;
 import co.tz.sheriaconnectapi.exceptions.NotificationNotFoundException;
-import co.tz.sheriaconnectapi.exceptions.UnauthorizedCaseAccessException;
+import co.tz.sheriaconnectapi.exceptions.NotificationAccessDeniedException;
 import co.tz.sheriaconnectapi.model.DTOs.NotificationResponse;
 import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.model.Entities.UserNotification;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.repositories.UserNotificationRepository;
-import co.tz.sheriaconnectapi.services.IncidentReportServices.IncidentReportAccessService;
+import co.tz.sheriaconnectapi.security.Access.AuthenticatedUserResolver;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -22,24 +23,26 @@ public class MarkNotificationReadService
         implements Command<MarkNotificationReadService.Input, NotificationResponse> {
 
     private final UserNotificationRepository userNotificationRepository;
-    private final IncidentReportAccessService accessService;
+    private final AuthenticatedUserResolver authenticatedUserResolver;
 
     public MarkNotificationReadService(
             UserNotificationRepository userNotificationRepository,
-            IncidentReportAccessService accessService
+            AuthenticatedUserResolver authenticatedUserResolver
     ) {
         this.userNotificationRepository = userNotificationRepository;
-        this.accessService = accessService;
+        this.authenticatedUserResolver = authenticatedUserResolver;
     }
 
     @Override
     public ResponseEntity<StandardResponse<NotificationResponse>> execute(Input input) {
-        User user = accessService.requireAuthenticatedUser(input.authentication());
+        User user = authenticatedUserResolver.requireUser(input.authentication());
+        AccessContext context = authenticatedUserResolver.requireContext(input.authentication());
         UserNotification notification = userNotificationRepository.findById(input.notificationId())
                 .orElseThrow(NotificationNotFoundException::new);
 
-        if (!notification.getUser().getId().equals(user.getId())) {
-            throw new UnauthorizedCaseAccessException();
+        if (!notification.getUser().getId().equals(user.getId())
+                || notification.getContext() != context) {
+            throw new NotificationAccessDeniedException();
         }
 
         if (notification.getReadAt() == null) {

@@ -4,49 +4,41 @@ import co.tz.sheriaconnectapi.exceptions.InvalidTrackingTokenException;
 import co.tz.sheriaconnectapi.exceptions.UnauthorizedCaseAccessException;
 import co.tz.sheriaconnectapi.model.Entities.IncidentReport;
 import co.tz.sheriaconnectapi.model.Entities.User;
-import co.tz.sheriaconnectapi.repositories.UserRepository;
+import co.tz.sheriaconnectapi.security.Access.AuthenticatedUserResolver;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
-import co.tz.sheriaconnectapi.security.Access.SessionAuthenticationDetails;
-import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 
 @Service
 public class IncidentReportAccessService {
 
-    private final UserRepository userRepository;
+    private final AuthenticatedUserResolver authenticatedUserResolver;
     private final TrackingTokenService trackingTokenService;
 
     public IncidentReportAccessService(
-            UserRepository userRepository,
+            AuthenticatedUserResolver authenticatedUserResolver,
             TrackingTokenService trackingTokenService
     ) {
-        this.userRepository = userRepository;
+        this.authenticatedUserResolver = authenticatedUserResolver;
         this.trackingTokenService = trackingTokenService;
     }
 
     public Optional<User> authenticatedUser(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
-            return Optional.empty();
-        }
-        return userRepository.findByEmail(authentication.getName());
+        return authenticatedUserResolver.authenticatedUser(authentication);
     }
 
-    public User requireAuthenticatedUser(Authentication authentication) {
-        return authenticatedCitizenUser(authentication)
-                .orElseThrow(UnauthorizedCaseAccessException::new);
+    public User requireCitizenUser(Authentication authentication) {
+        return authenticatedUserResolver.requireCitizenUser(authentication);
     }
 
     public Optional<User> authenticatedCitizenUser(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+        Optional<User> user = authenticatedUserResolver.authenticatedUser(authentication);
+        if (user.isEmpty()) {
             return Optional.empty();
         }
-        if (authentication.getDetails() instanceof SessionAuthenticationDetails details
-                && details.context() != AccessContext.CITIZEN) {
-            throw new UnauthorizedCaseAccessException();
-        }
-        return userRepository.findByEmail(authentication.getName());
+        authenticatedUserResolver.requireCitizenUser(authentication);
+        return user;
     }
 
     public void assertCitizenAccess(

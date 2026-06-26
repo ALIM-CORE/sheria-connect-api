@@ -11,6 +11,7 @@ import co.tz.sheriaconnectapi.model.Entities.StoryModerationNote;
 import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.repositories.PublicStoryRepository;
 import co.tz.sheriaconnectapi.repositories.StoryModerationNoteRepository;
+import co.tz.sheriaconnectapi.security.Access.AuthenticatedUserResolver;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -23,18 +24,18 @@ public class CreateStoryModerationNoteService
 
     private final PublicStoryRepository publicStoryRepository;
     private final StoryModerationNoteRepository storyModerationNoteRepository;
-    private final StoryAccessService storyAccessService;
+    private final AuthenticatedUserResolver authenticatedUserResolver;
     private final StoryResponseFactory storyResponseFactory;
 
     public CreateStoryModerationNoteService(
             PublicStoryRepository publicStoryRepository,
             StoryModerationNoteRepository storyModerationNoteRepository,
-            StoryAccessService storyAccessService,
+            AuthenticatedUserResolver authenticatedUserResolver,
             StoryResponseFactory storyResponseFactory
     ) {
         this.publicStoryRepository = publicStoryRepository;
         this.storyModerationNoteRepository = storyModerationNoteRepository;
-        this.storyAccessService = storyAccessService;
+        this.authenticatedUserResolver = authenticatedUserResolver;
         this.storyResponseFactory = storyResponseFactory;
     }
 
@@ -47,7 +48,7 @@ public class CreateStoryModerationNoteService
             throw new InvalidStoryContentException("Moderation note is required");
         }
 
-        User admin = storyAccessService.requireAuthenticatedUser(input.authentication());
+        User admin = authenticatedUserResolver.requireStaffUser(input.authentication());
         PublicStory story = publicStoryRepository.findByPublicId(input.publicId())
                 .orElseThrow(StoryNotFoundException::new);
 

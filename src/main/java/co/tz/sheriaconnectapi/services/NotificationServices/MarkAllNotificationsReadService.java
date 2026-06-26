@@ -3,8 +3,9 @@ package co.tz.sheriaconnectapi.services.NotificationServices;
 import co.tz.sheriaconnectapi.abstractions.Command;
 import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.model.Entities.UserNotification;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.repositories.UserNotificationRepository;
-import co.tz.sheriaconnectapi.services.IncidentReportServices.IncidentReportAccessService;
+import co.tz.sheriaconnectapi.security.Access.AuthenticatedUserResolver;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -18,21 +19,23 @@ import java.time.Instant;
 public class MarkAllNotificationsReadService implements Command<Authentication, Void> {
 
     private final UserNotificationRepository userNotificationRepository;
-    private final IncidentReportAccessService accessService;
+    private final AuthenticatedUserResolver authenticatedUserResolver;
 
     public MarkAllNotificationsReadService(
             UserNotificationRepository userNotificationRepository,
-            IncidentReportAccessService accessService
+            AuthenticatedUserResolver authenticatedUserResolver
     ) {
         this.userNotificationRepository = userNotificationRepository;
-        this.accessService = accessService;
+        this.authenticatedUserResolver = authenticatedUserResolver;
     }
 
     @Override
     public ResponseEntity<StandardResponse<Void>> execute(Authentication authentication) {
-        User user = accessService.requireAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.requireUser(authentication);
+        AccessContext context = authenticatedUserResolver.requireContext(authentication);
         Instant now = Instant.now();
-        for (UserNotification notification : userNotificationRepository.findByUserOrderByCreatedAtDesc(user)) {
+        for (UserNotification notification :
+                userNotificationRepository.findByUserAndContextOrderByCreatedAtDesc(user, context)) {
             if (notification.getReadAt() == null) {
                 notification.setReadAt(now);
                 userNotificationRepository.save(notification);

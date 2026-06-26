@@ -1,6 +1,7 @@
 package co.tz.sheriaconnectapi.model.Entities;
 
 import co.tz.sheriaconnectapi.model.Enums.NotificationType;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -45,6 +46,10 @@ public class UserNotification {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 64)
     private NotificationType type;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 24)
+    private AccessContext context;
 
     @Column(nullable = false, length = 180)
     private String title;

@@ -12,6 +12,7 @@ import co.tz.sheriaconnectapi.model.Entities.IncidentReport;
 import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.model.Enums.IncidentReportStatus;
 import co.tz.sheriaconnectapi.model.Enums.NotificationType;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.repositories.CaseStatusHistoryRepository;
 import co.tz.sheriaconnectapi.repositories.IncidentReportRepository;
 import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
@@ -136,6 +137,7 @@ public class UpdateIncidentReportStatusService
 
             notificationDispatchService.notify(
                     report.getReporterUser(),
+                    AccessContext.CITIZEN,
                     NotificationType.CASE_STATUS_CHANGED,
                     "Case status updated",
                     "Case " + report.getCaseNumber() + " is now "

@@ -32,7 +32,7 @@ public class ListMyIncidentReportsService
     public ResponseEntity<StandardResponse<List<IncidentReportSummaryResponse>>> execute(
             Authentication authentication
     ) {
-        User user = accessService.requireAuthenticatedUser(authentication);
+        User user = accessService.requireCitizenUser(authentication);
         List<IncidentReportSummaryResponse> response = incidentReportRepository
                 .findByReporterUserOrderByCreatedAtDesc(user)
                 .stream()

@@ -2,6 +2,7 @@ package co.tz.sheriaconnectapi.services.NotificationServices;
 
 import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.model.Entities.UserNotification;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.model.Enums.NotificationType;
 import co.tz.sheriaconnectapi.repositories.UserNotificationRepository;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ public class NotificationDispatchService {
 
     public void notify(
             User user,
+            AccessContext context,
             NotificationType type,
             String title,
             String body,
@@ -29,6 +31,7 @@ public class NotificationDispatchService {
 
         UserNotification notification = new UserNotification();
         notification.setUser(user);
+        notification.setContext(context);
         notification.setType(type);
         notification.setTitle(title);
         notification.setBody(body);

@@ -14,11 +14,12 @@ import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.model.Enums.IncidentReportStatus;
 import co.tz.sheriaconnectapi.model.Enums.MatchingRequestStatus;
 import co.tz.sheriaconnectapi.model.Enums.NotificationType;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.repositories.CaseMatchRequestRepository;
 import co.tz.sheriaconnectapi.repositories.CaseStatusHistoryRepository;
 import co.tz.sheriaconnectapi.repositories.IncidentReportRepository;
 import co.tz.sheriaconnectapi.repositories.ProviderProfileRepository;
-import co.tz.sheriaconnectapi.services.IncidentReportServices.IncidentReportAccessService;
+import co.tz.sheriaconnectapi.security.Access.AuthenticatedUserResolver;
 import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
@@ -52,7 +53,7 @@ public class UpdateMatchingRequestStatusService
     private final ProviderProfileRepository providerProfileRepository;
     private final IncidentReportRepository incidentReportRepository;
     private final CaseStatusHistoryRepository caseStatusHistoryRepository;
-    private final IncidentReportAccessService incidentReportAccessService;
+    private final AuthenticatedUserResolver authenticatedUserResolver;
     private final NotificationDispatchService notificationDispatchService;
 
     public UpdateMatchingRequestStatusService(
@@ -60,14 +61,14 @@ public class UpdateMatchingRequestStatusService
             ProviderProfileRepository providerProfileRepository,
             IncidentReportRepository incidentReportRepository,
             CaseStatusHistoryRepository caseStatusHistoryRepository,
-            IncidentReportAccessService incidentReportAccessService,
+            AuthenticatedUserResolver authenticatedUserResolver,
             NotificationDispatchService notificationDispatchService
     ) {
         this.caseMatchRequestRepository = caseMatchRequestRepository;
         this.providerProfileRepository = providerProfileRepository;
         this.incidentReportRepository = incidentReportRepository;
         this.caseStatusHistoryRepository = caseStatusHistoryRepository;
-        this.incidentReportAccessService = incidentReportAccessService;
+        this.authenticatedUserResolver = authenticatedUserResolver;
         this.notificationDispatchService = notificationDispatchService;
     }
 
@@ -89,7 +90,7 @@ public class UpdateMatchingRequestStatusService
             throw new InvalidMatchingRequestStatusException();
         }
 
-        User decidedBy = incidentReportAccessService.requireAuthenticatedUser(input.authentication());
+        User decidedBy = authenticatedUserResolver.requireUser(input.authentication());
         ProviderProfile providerProfile = matchRequest.getProviderProfile();
         IncidentReport report = matchRequest.getIncidentReport();
 
@@ -118,6 +119,7 @@ public class UpdateMatchingRequestStatusService
 
         notificationDispatchService.notify(
                 report.getReporterUser(),
+                AccessContext.CITIZEN,
                 NotificationType.MATCHING_REQUEST_UPDATED,
                 "Matching request " + toStatus.name().toLowerCase().replace('_', ' '),
                 "A provider updated a matching request for case " + report.getCaseNumber() + ".",
