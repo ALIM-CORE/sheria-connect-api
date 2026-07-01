@@ -39,3 +39,28 @@ jobs:
             sed -i "s|ghcr.io/alim-core/sheria-connect-backend:.*|ghcr.io/alim-core/sheria-connect-backend:${GITHUB_SHA::7}|" docker-compose.yaml
             docker compose pull
             docker compose up -d
+        
+      - name: Wait for app to be ready
+        run: sleep 20
+ 
+      - name: Health check — Sheria Connect API
+        run: |
+          FAILED=0
+          for URL in \
+            "https://api.sheriaconnect.co.tz/" \
+            "https://sheriaconnect.co.tz/health"; do
+            echo "Checking $URL ..."
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$URL")
+            echo "  HTTP $STATUS"
+            if [ "$STATUS" != "200" ]; then
+              echo "  ❌ $URL is not healthy (got $STATUS)"
+              FAILED=1
+            else
+              echo "  ✅ $URL is healthy"
+            fi
+          done
+          if [ "$FAILED" = "1" ]; then
+            echo "❌ One or more Sheria Connect API health checks failed."
+            exit 1
+          fi
+          echo "✅ All Sheria Connect API health checks passed."
