@@ -42,7 +42,8 @@ public class RegisterProviderService implements Command<ProviderRegisterRequest,
         user.setEmail(request.getEmail());
         user.setPassword(request.getPassword());
 
-        User savedUser = accountRegistrationService.register(user, PROVIDER_ROLE);
+        RegistrationResult result = accountRegistrationService.register(user, PROVIDER_ROLE);
+        User savedUser = result.user();
 
         ProviderProfile profile = new ProviderProfile();
         profile.setUser(savedUser);
@@ -57,9 +58,17 @@ public class RegisterProviderService implements Command<ProviderRegisterRequest,
 
         return ResponseUtil.success(
                 new UserDTO(savedUser),
-                "Provider registration successful. Please verify your email and complete your profile.",
+                registrationMessage(result.verificationEmailSent()),
                 HttpStatus.CREATED
         );
+    }
+
+    private String registrationMessage(boolean verificationEmailSent) {
+        if (verificationEmailSent) {
+            return "Provider registration successful. Please verify your email and complete your profile.";
+        }
+
+        return "Provider registration successful, but the verification email could not be sent right now. Please request a new verification email later.";
     }
 
     private String trimToNull(String value) {

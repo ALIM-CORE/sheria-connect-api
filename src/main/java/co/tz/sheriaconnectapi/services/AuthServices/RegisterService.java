@@ -23,12 +23,21 @@ public class RegisterService implements Command<RegisterInput, UserDTO> {
 
     @Override
     public ResponseEntity<StandardResponse<UserDTO>> execute(RegisterInput input) {
-        User savedUser = accountRegistrationService.register(input.getUser(), CITIZEN_ROLE);
+        RegistrationResult result = accountRegistrationService.register(input.getUser(), CITIZEN_ROLE);
+        User savedUser = result.user();
 
         return ResponseUtil.success(
                 new UserDTO(savedUser),
-                "Registration successful. Please verify your email.",
+                registrationMessage(result.verificationEmailSent()),
                 HttpStatus.CREATED
         );
+    }
+
+    private String registrationMessage(boolean verificationEmailSent) {
+        if (verificationEmailSent) {
+            return "Registration successful. Please verify your email.";
+        }
+
+        return "Registration successful, but the verification email could not be sent right now. Please request a new verification email later.";
     }
 }

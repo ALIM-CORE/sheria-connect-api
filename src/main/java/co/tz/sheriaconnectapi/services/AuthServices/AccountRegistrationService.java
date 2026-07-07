@@ -1,6 +1,7 @@
 package co.tz.sheriaconnectapi.services.AuthServices;
 
 import co.tz.sheriaconnectapi.exceptions.ErrorMessages;
+import co.tz.sheriaconnectapi.exceptions.EmailDeliveryException;
 import co.tz.sheriaconnectapi.exceptions.UserNotValidException;
 import co.tz.sheriaconnectapi.model.Entities.EmailVerificationToken;
 import co.tz.sheriaconnectapi.model.Entities.Role;
@@ -14,6 +15,8 @@ import co.tz.sheriaconnectapi.repositories.RoleRepository;
 import co.tz.sheriaconnectapi.repositories.UserRepository;
 import co.tz.sheriaconnectapi.repositories.UserRoleAssignmentRepository;
 import co.tz.sheriaconnectapi.services.EmailService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,9 @@ import java.util.UUID;
 
 @Service
 public class AccountRegistrationService {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(AccountRegistrationService.class);
 
     private final UserRepository userRepository;
     private final EmailVerificationTokenRepository tokenRepository;
@@ -55,7 +61,7 @@ public class AccountRegistrationService {
         this.assignmentRepository = assignmentRepository;
     }
 
-    public User register(User user, String roleName) {
+    public RegistrationResult register(User user, String roleName) {
         normalize(user);
 
         if (userRepository.existsByEmail(user.getEmail())) {
@@ -90,9 +96,9 @@ public class AccountRegistrationService {
         tokenRepository.deleteByUserId(savedUser.getId());
         EmailVerificationToken token = createVerificationToken(savedUser);
         tokenRepository.save(token);
-        sendVerificationEmail(savedUser, token);
+        boolean verificationEmailSent = sendVerificationEmail(savedUser, token);
 
-        return savedUser;
+        return new RegistrationResult(savedUser, verificationEmailSent);
     }
 
     private void normalize(User user) {
@@ -118,7 +124,7 @@ public class AccountRegistrationService {
         return token;
     }
 
-    private void sendVerificationEmail(User savedUser, EmailVerificationToken token) {
+    private boolean sendVerificationEmail(User savedUser, EmailVerificationToken token) {
         String verificationLink = UriComponentsBuilder
                 .fromUriString(frontendBaseDomain)
                 .path("/auth/verify-email")
@@ -129,10 +135,20 @@ public class AccountRegistrationService {
                 .encode()
                 .toUriString();
 
-        emailService.sendEmailVerification(
-                savedUser.getEmail(),
-                savedUser.getName(),
-                verificationLink
-        );
+        try {
+            emailService.sendEmailVerification(
+                    savedUser.getEmail(),
+                    savedUser.getName(),
+                    verificationLink
+            );
+            return true;
+        } catch (EmailDeliveryException ex) {
+            log.warn(
+                    "Verification email could not be sent during registration for user {}",
+                    savedUser.getId(),
+                    ex
+            );
+            return false;
+        }
     }
 }

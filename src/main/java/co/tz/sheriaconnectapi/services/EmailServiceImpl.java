@@ -1,39 +1,51 @@
 package co.tz.sheriaconnectapi.services;
 
+import co.tz.sheriaconnectapi.exceptions.EmailDeliveryException;
 import co.tz.sheriaconnectapi.utils.EmailTemplateBuilder;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.io.UnsupportedEncodingException;
 import java.time.Instant;
 
 @Service
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
+    private final String fromName;
+    private final String fromAddress;
 
-    public EmailServiceImpl(JavaMailSender mailSender) {
+    public EmailServiceImpl(
+            JavaMailSender mailSender,
+            @Value("${spring.mail.from.name:Sheria Connect}") String fromName,
+            @Value("${spring.mail.from.address:noreply@sheriaconnect.co.tz}") String fromAddress
+    ) {
         this.mailSender = mailSender;
+        this.fromName = fromName;
+        this.fromAddress = fromAddress;
     }
 
-    // 🔹 Central mail sending logic
+    // Central mail sending logic.
     private void sendHtmlEmail(String to, String subject, String htmlContent) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper =
                     new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom("Sheria Connect <noreply@sheriaconnect.co.tz>");
+            helper.setFrom(fromAddress, fromName);
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
 
-        } catch (MessagingException e) {
-            throw new RuntimeException("Failed to send email", e);
+        } catch (MessagingException | MailException | UnsupportedEncodingException e) {
+            throw new EmailDeliveryException(e);
         }
     }
 

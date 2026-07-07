@@ -128,6 +128,13 @@ public class GlobalExceptionHandler {
         return ResponseUtil.error(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(EmailDeliveryException.class)
+    public ResponseEntity<StandardResponse<Void>> handleEmailDelivery(
+            EmailDeliveryException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
     @ExceptionHandler(PasswordResetTokenExpiredException.class)
     public ResponseEntity<StandardResponse<Void>> handleExpiredPasswordResetToken(
             PasswordResetTokenExpiredException ex
