@@ -10,4 +10,9 @@ public class Index {
     public String index(){
         return "Connected Succesfully";
     }
+
+    @GetMapping("/health")
+    public String health() {
+        return "OK";
+    }
 }
