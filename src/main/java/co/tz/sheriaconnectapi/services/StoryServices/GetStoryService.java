@@ -36,7 +36,9 @@ public class GetStoryService implements Query<StoryLookupInput, StoryResponse> {
     public ResponseEntity<StandardResponse<StoryResponse>> execute(StoryLookupInput input) {
         PublicStory story = publicStoryRepository.findByPublicId(input.publicId())
                 .orElseThrow(StoryNotFoundException::new);
-        User viewer = storyAccessService.authenticatedUser(input.authentication()).orElse(null);
+        User viewer = input.admin()
+                ? null
+                : storyAccessService.authenticatedUser(input.authentication()).orElse(null);
 
         boolean published = story.getModerationStatus() == StoryModerationStatus.PUBLISHED;
         boolean owner = storyAccessService.isOwner(story, viewer);
