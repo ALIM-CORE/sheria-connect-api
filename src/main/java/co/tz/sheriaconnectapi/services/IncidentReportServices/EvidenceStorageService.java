@@ -56,9 +56,8 @@ public class EvidenceStorageService {
             throw new EvidenceFileTooLargeException();
         }
 
-        String contentType = file.getContentType() == null
-                ? "application/octet-stream"
-                : file.getContentType().toLowerCase(Locale.ROOT);
+        String originalFileName = sanitizeOriginalName(file.getOriginalFilename());
+        String contentType = resolveContentType(file, originalFileName);
         if (!allowedContentTypes.contains(contentType)) {
             throw new UnsupportedEvidenceTypeException();
         }
@@ -66,7 +65,6 @@ public class EvidenceStorageService {
         try {
             byte[] bytes = file.getBytes();
             String checksum = sha256(bytes);
-            String originalFileName = sanitizeOriginalName(file.getOriginalFilename());
             String extension = extensionOf(originalFileName);
             String storedFileName = UUID.randomUUID() + extension;
             String monthFolder = YearMonth.now().toString();
@@ -113,6 +111,30 @@ public class EvidenceStorageService {
             return "";
         }
         return originalFileName.substring(dotIndex).toLowerCase(Locale.ROOT);
+    }
+
+    private String resolveContentType(MultipartFile file, String originalFileName) {
+        String contentType = file.getContentType() == null
+                ? ""
+                : file.getContentType().toLowerCase(Locale.ROOT);
+        if (!contentType.isBlank() && !"application/octet-stream".equals(contentType)) {
+            return contentType;
+        }
+
+        return switch (extensionOf(originalFileName)) {
+            case ".jpg", ".jpeg" -> "image/jpeg";
+            case ".png" -> "image/png";
+            case ".webp" -> "image/webp";
+            case ".mp4" -> "video/mp4";
+            case ".mp3" -> "audio/mpeg";
+            case ".m4a" -> "audio/mp4";
+            case ".wav" -> "audio/wav";
+            case ".pdf" -> "application/pdf";
+            case ".txt" -> "text/plain";
+            case ".doc" -> "application/msword";
+            case ".docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            default -> "application/octet-stream";
+        };
     }
 
     private String sha256(byte[] bytes) {
