@@ -25,9 +25,9 @@ RUN mvn clean package -DskipTests
  
 # ---- Runtime Stage ----
  
-# Start a fresh image with just the JDK — none of the Maven build tools
+# Start a fresh image with just the JRE — none of the Maven build tools
 # from Stage 1 are included here, keeping the final image smaller.
-FROM eclipse-temurin:21-jdk
+FROM eclipse-temurin:21-jre
  
 # Set the working directory for the running application.
 WORKDIR /app
