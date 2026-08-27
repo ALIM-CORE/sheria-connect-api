@@ -35,12 +35,24 @@ public class ListProviderCaseMessagesService
                 input.matchingRequestId(),
                 input.authentication()
         );
-        List<CaseMessageResponse> messages = caseMessageRepository
-                .findByCaseMatchRequestOrderByCreatedAtAsc(context.matchRequest())
+        List<CaseMessageResponse> messages = providerMessages(input, context)
                 .stream()
                 .map(CaseMessageResponse::new)
                 .toList();
 
         return ResponseUtil.success(messages, "Case messages retrieved", HttpStatus.OK);
+    }
+
+    private List<co.tz.sheriaconnectapi.model.Entities.CaseMessage> providerMessages(
+            CaseMessageInput input,
+            CaseMessageAccessService.ProviderMessageContext context
+    ) {
+        if (input.afterId() != null) {
+            return caseMessageRepository.findByCaseMatchRequestAndIdGreaterThanOrderByCreatedAtAsc(
+                    context.matchRequest(),
+                    input.afterId()
+            );
+        }
+        return caseMessageRepository.findByCaseMatchRequestOrderByCreatedAtAsc(context.matchRequest());
     }
 }

@@ -10,10 +10,12 @@ import co.tz.sheriaconnectapi.model.DTOs.IncidentReportSummaryResponse;
 import co.tz.sheriaconnectapi.model.DTOs.UploadEvidenceInput;
 import co.tz.sheriaconnectapi.model.Enums.EvidenceUploadSource;
 import co.tz.sheriaconnectapi.services.IncidentReportServices.CreateIncidentReportService;
+import co.tz.sheriaconnectapi.services.IncidentReportServices.DownloadEvidenceService;
 import co.tz.sheriaconnectapi.services.IncidentReportServices.GetIncidentReportService;
 import co.tz.sheriaconnectapi.services.IncidentReportServices.ListMyIncidentReportsService;
 import co.tz.sheriaconnectapi.services.IncidentReportServices.UploadEvidenceService;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -42,17 +44,20 @@ public class IncidentReportController {
     private final GetIncidentReportService getIncidentReportService;
     private final ListMyIncidentReportsService listMyIncidentReportsService;
     private final UploadEvidenceService uploadEvidenceService;
+    private final DownloadEvidenceService downloadEvidenceService;
 
     public IncidentReportController(
             CreateIncidentReportService createIncidentReportService,
             GetIncidentReportService getIncidentReportService,
             ListMyIncidentReportsService listMyIncidentReportsService,
-            UploadEvidenceService uploadEvidenceService
+            UploadEvidenceService uploadEvidenceService,
+            DownloadEvidenceService downloadEvidenceService
     ) {
         this.createIncidentReportService = createIncidentReportService;
         this.getIncidentReportService = getIncidentReportService;
         this.listMyIncidentReportsService = listMyIncidentReportsService;
         this.uploadEvidenceService = uploadEvidenceService;
+        this.downloadEvidenceService = downloadEvidenceService;
     }
 
     @PostMapping
@@ -111,6 +116,23 @@ public class IncidentReportController {
                         uploadSource,
                         authentication
                 )
+        );
+    }
+
+    @GetMapping("/{caseNumber}/evidence/{evidenceId}")
+    public ResponseEntity<Resource> downloadEvidence(
+            @PathVariable String caseNumber,
+            @PathVariable Long evidenceId,
+            @RequestParam(required = false) String trackingToken,
+            @RequestHeader(name = "X-Case-Tracking-Token", required = false) String trackingTokenHeader,
+            Authentication authentication
+    ) {
+        validateCaseNumber(caseNumber);
+        return downloadEvidenceService.downloadForIncident(
+                caseNumber,
+                evidenceId,
+                firstPresent(trackingTokenHeader, trackingToken),
+                authentication
         );
     }
 

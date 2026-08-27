@@ -6,7 +6,9 @@ import co.tz.sheriaconnectapi.model.DTOs.UpdateMatchingRequestStatusRequest;
 import co.tz.sheriaconnectapi.services.MatchingServices.GetMyProviderCaseRequestService;
 import co.tz.sheriaconnectapi.services.MatchingServices.ListMyProviderCaseRequestsService;
 import co.tz.sheriaconnectapi.services.MatchingServices.UpdateMyProviderCaseRequestStatusService;
+import co.tz.sheriaconnectapi.services.IncidentReportServices.DownloadEvidenceService;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
+import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,15 +27,18 @@ public class ProviderCaseRequestController {
     private final ListMyProviderCaseRequestsService listMyProviderCaseRequestsService;
     private final GetMyProviderCaseRequestService getMyProviderCaseRequestService;
     private final UpdateMyProviderCaseRequestStatusService updateMyProviderCaseRequestStatusService;
+    private final DownloadEvidenceService downloadEvidenceService;
 
     public ProviderCaseRequestController(
             ListMyProviderCaseRequestsService listMyProviderCaseRequestsService,
             GetMyProviderCaseRequestService getMyProviderCaseRequestService,
-            UpdateMyProviderCaseRequestStatusService updateMyProviderCaseRequestStatusService
+            UpdateMyProviderCaseRequestStatusService updateMyProviderCaseRequestStatusService,
+            DownloadEvidenceService downloadEvidenceService
     ) {
         this.listMyProviderCaseRequestsService = listMyProviderCaseRequestsService;
         this.getMyProviderCaseRequestService = getMyProviderCaseRequestService;
         this.updateMyProviderCaseRequestStatusService = updateMyProviderCaseRequestStatusService;
+        this.downloadEvidenceService = downloadEvidenceService;
     }
 
     @GetMapping
@@ -61,6 +66,19 @@ public class ProviderCaseRequestController {
     ) {
         return updateMyProviderCaseRequestStatusService.execute(
                 new UpdateMatchingRequestStatusInput(matchingRequestId, request, authentication)
+        );
+    }
+
+    @GetMapping("/{matchingRequestId}/evidence/{evidenceId}")
+    public ResponseEntity<Resource> downloadEvidence(
+            @PathVariable Long matchingRequestId,
+            @PathVariable Long evidenceId,
+            Authentication authentication
+    ) {
+        return downloadEvidenceService.downloadForProvider(
+                matchingRequestId,
+                evidenceId,
+                authentication
         );
     }
 }

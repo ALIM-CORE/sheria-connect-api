@@ -1,8 +1,8 @@
 package co.tz.sheriaconnectapi.services.StoryServices;
 
-import co.tz.sheriaconnectapi.exceptions.UnauthorizedStoryAccessException;
 import co.tz.sheriaconnectapi.model.Entities.PublicStory;
 import co.tz.sheriaconnectapi.model.Entities.User;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.security.Access.AuthenticatedUserResolver;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -23,13 +23,14 @@ public class StoryAccessService {
         if (user.isEmpty()) {
             return Optional.empty();
         }
-        authenticatedUserResolver.requireStoryAuthor(authentication);
-        return user;
+        if (authenticatedUserResolver.requireContext(authentication) == AccessContext.CITIZEN) {
+            return user;
+        }
+        return Optional.empty();
     }
 
     public User requireAuthenticatedUser(Authentication authentication) {
-        return authenticatedUser(authentication)
-                .orElseThrow(UnauthorizedStoryAccessException::new);
+        return authenticatedUserResolver.requireStoryAuthor(authentication);
     }
 
     public boolean isOwner(PublicStory story, User user) {

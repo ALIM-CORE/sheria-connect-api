@@ -35,5 +35,12 @@ public class RefreshToken {
 
     private boolean revoked = false;
 
+    @Column(name = "revoked_at")
+    private Instant revokedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "replaced_by_token_id")
+    private RefreshToken replacedByToken;
+
     private Instant createdAt = Instant.now();
 }

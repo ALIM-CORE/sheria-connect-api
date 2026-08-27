@@ -32,12 +32,24 @@ public class ListCitizenCaseMessagesService
             CaseMessageInput input
     ) {
         var context = accessService.requireCitizenContext(input.caseNumber(), input.authentication());
-        List<CaseMessageResponse> messages = caseMessageRepository
-                .findByIncidentReportOrderByCreatedAtAsc(context.report())
+        List<CaseMessageResponse> messages = citizenMessages(input, context)
                 .stream()
                 .map(CaseMessageResponse::new)
                 .toList();
 
         return ResponseUtil.success(messages, "Case messages retrieved", HttpStatus.OK);
+    }
+
+    private List<co.tz.sheriaconnectapi.model.Entities.CaseMessage> citizenMessages(
+            CaseMessageInput input,
+            CaseMessageAccessService.CitizenMessageContext context
+    ) {
+        if (input.afterId() != null) {
+            return caseMessageRepository.findByIncidentReportAndIdGreaterThanOrderByCreatedAtAsc(
+                    context.report(),
+                    input.afterId()
+            );
+        }
+        return caseMessageRepository.findByIncidentReportOrderByCreatedAtAsc(context.report());
     }
 }

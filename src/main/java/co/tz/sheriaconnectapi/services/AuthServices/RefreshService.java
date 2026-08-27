@@ -12,6 +12,7 @@ import co.tz.sheriaconnectapi.model.Entities.RefreshToken;
 import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.repositories.AuthSessionRepository;
 import co.tz.sheriaconnectapi.repositories.RefreshTokenRepository;
+import co.tz.sheriaconnectapi.security.Access.EffectiveAccess;
 import co.tz.sheriaconnectapi.security.Access.ScopedAuthorityService;
 import co.tz.sheriaconnectapi.security.Jwt.ClientType;
 import co.tz.sheriaconnectapi.security.Jwt.JwtUtil;
@@ -34,6 +35,8 @@ import java.util.Optional;
 
 @Service
 public class RefreshService implements Command<RefreshInput, Map<String, Object>> {
+    private static final Duration ROTATED_TOKEN_REUSE_GRACE = Duration.ofSeconds(30);
+
     private final RefreshTokenRepository refreshTokenRepository;
     private final AuthSessionRepository authSessionRepository;
     private final RefreshTokenCookieService refreshTokenCookieService;
@@ -75,21 +78,80 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
 
         RefreshToken storedToken = refreshTokenRepository.findByToken(tokenValue)
                 .orElseThrow(() -> new InvalidTokenException(ErrorMessages.INVALID_TOKEN.getMessage()));
-        AuthSession session = storedToken.getAuthSession();
-        if (storedToken.isRevoked()
-                || storedToken.getExpiryDate().isBefore(Instant.now())
-                || session == null
-                || session.isRevoked()
-                || session.getExpiresAt().isBefore(Instant.now())) {
+        Instant now = Instant.now();
+        if (storedToken.isRevoked()) {
+            return reuseRecentlyRotatedToken(input, storedToken, now);
+        }
+
+        RefreshContext context = validateUsableToken(storedToken, now);
+        storedToken.setRevoked(true);
+        storedToken.setRevokedAt(now);
+
+        context.session().setLastActivityAt(now);
+        authSessionRepository.save(context.session());
+
+        String newRefreshToken = JwtUtil.generateRefreshToken(context.user(), context.session());
+        RefreshToken replacement = new RefreshToken();
+        replacement.setToken(newRefreshToken);
+        replacement.setUser(context.user());
+        replacement.setAuthSession(context.session());
+        replacement.setClientType(context.session().getClientType());
+        replacement.setExpiryDate(context.session().getExpiresAt());
+        replacement = refreshTokenRepository.save(replacement);
+
+        storedToken.setReplacedByToken(replacement);
+        refreshTokenRepository.save(storedToken);
+
+        return refreshedResponse(input, context, newRefreshToken);
+    }
+
+    private ResponseEntity<StandardResponse<Map<String, Object>>> reuseRecentlyRotatedToken(
+            RefreshInput input,
+            RefreshToken storedToken,
+            Instant now
+    ) {
+        RefreshToken replacement = storedToken.getReplacedByToken();
+        if (!isWithinReuseGrace(storedToken, replacement, now)) {
             throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN.getMessage());
         }
 
-        User user = storedToken.getUser();
+        RefreshContext context = validateUsableToken(replacement, now);
+        context.session().setLastActivityAt(now);
+        authSessionRepository.save(context.session());
+        return refreshedResponse(input, context, replacement.getToken());
+    }
+
+    private boolean isWithinReuseGrace(
+            RefreshToken storedToken,
+            RefreshToken replacement,
+            Instant now
+    ) {
+        return replacement != null
+                && storedToken.getRevokedAt() != null
+                && !storedToken.getRevokedAt().isBefore(now.minus(ROTATED_TOKEN_REUSE_GRACE))
+                && storedToken.getExpiryDate() != null
+                && !storedToken.getExpiryDate().isBefore(now)
+                && replacement.getAuthSession() != null
+                && storedToken.getAuthSession() != null
+                && replacement.getAuthSession().getId().equals(storedToken.getAuthSession().getId());
+    }
+
+    private RefreshContext validateUsableToken(RefreshToken token, Instant now) {
+        AuthSession session = token.getAuthSession();
+        if (token.isRevoked()
+                || token.getExpiryDate() == null
+                || token.getExpiryDate().isBefore(now)
+                || session == null
+                || session.isRevoked()
+                || session.getExpiresAt().isBefore(now)) {
+            throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN.getMessage());
+        }
+
+        User user = token.getUser();
         if (!Boolean.TRUE.equals(user.getActive()) || Boolean.TRUE.equals(user.getLocked())) {
             session.setRevoked(true);
             authSessionRepository.save(session);
-            storedToken.setRevoked(true);
-            refreshTokenRepository.save(storedToken);
+            revoke(token);
             throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN.getMessage());
         }
         if (session.getActiveContext() == co.tz.sheriaconnectapi.model.Enums.AccessContext.STAFF
@@ -101,39 +163,45 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
         if (effectiveAccess.roles().isEmpty()) {
             session.setRevoked(true);
             authSessionRepository.save(session);
-            storedToken.setRevoked(true);
-            refreshTokenRepository.save(storedToken);
+            revoke(token);
             throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN.getMessage());
         }
 
-        storedToken.setRevoked(true);
-        refreshTokenRepository.save(storedToken);
-        session.setLastActivityAt(Instant.now());
-        authSessionRepository.save(session);
+        return new RefreshContext(user, session, effectiveAccess);
+    }
 
-        String newAccessToken = JwtUtil.generateAccessToken(user, session);
-        String newRefreshToken = JwtUtil.generateRefreshToken(user, session);
-        RefreshToken replacement = new RefreshToken();
-        replacement.setToken(newRefreshToken);
-        replacement.setUser(user);
-        replacement.setAuthSession(session);
-        replacement.setClientType(session.getClientType());
-        replacement.setExpiryDate(session.getExpiresAt());
-        refreshTokenRepository.save(replacement);
+    private void revoke(RefreshToken token) {
+        token.setRevoked(true);
+        token.setRevokedAt(Instant.now());
+        refreshTokenRepository.save(token);
+    }
 
-        if (session.getClientType() == ClientType.WEB) {
+    private ResponseEntity<StandardResponse<Map<String, Object>>> refreshedResponse(
+            RefreshInput input,
+            RefreshContext context,
+            String refreshToken
+    ) {
+        String newAccessToken = JwtUtil.generateAccessToken(context.user(), context.session());
+        if (context.session().getClientType() == ClientType.WEB) {
             input.getResponse().addHeader(
                     HttpHeaders.SET_COOKIE,
-                    refreshTokenCookieService.create(newRefreshToken, Duration.ofDays(7))
+                    refreshTokenCookieService.create(refreshToken, Duration.ofDays(7))
             );
         }
 
         Map<String, Object> body = new HashMap<>();
         body.put("access", newAccessToken);
-        body.put("user", new UserDTO(user, effectiveAccess));
-        if (session.getClientType() == ClientType.MOBILE) {
-            body.put("refresh", newRefreshToken);
+        body.put("user", new UserDTO(context.user(), context.effectiveAccess()));
+        if (context.session().getClientType() == ClientType.MOBILE) {
+            body.put("refresh", refreshToken);
         }
         return ResponseUtil.success(body, "Token refreshed successfully", HttpStatus.OK);
+    }
+
+    private record RefreshContext(
+            User user,
+            AuthSession session,
+            EffectiveAccess effectiveAccess
+    ) {
     }
 }

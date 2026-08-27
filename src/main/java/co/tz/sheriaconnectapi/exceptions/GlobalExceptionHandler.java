@@ -156,6 +156,13 @@ public class GlobalExceptionHandler {
         return ResponseUtil.error(ex.getMessage(), HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(EvidenceFileNotFoundException.class)
+    public ResponseEntity<StandardResponse<Void>> handleEvidenceFileNotFound(
+            EvidenceFileNotFoundException ex
+    ) {
+        return ResponseUtil.error(ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(ProviderProfileNotFoundException.class)
     public ResponseEntity<StandardResponse<Void>> handleProviderProfileNotFound(
             ProviderProfileNotFoundException ex

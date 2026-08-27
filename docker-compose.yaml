@@ -6,6 +6,8 @@ services:
       - "6001:6001"
     env_file:
       - .env
+    volumes:
+      - evidence_uploads:/app/uploads/evidence
     depends_on:
       - db
 
@@ -22,3 +24,4 @@ services:
 
 volumes:
   pgdata:
+  evidence_uploads:

@@ -2,6 +2,7 @@ package co.tz.sheriaconnectapi.services.IncidentReportServices;
 
 import co.tz.sheriaconnectapi.exceptions.InvalidTrackingTokenException;
 import co.tz.sheriaconnectapi.exceptions.UnauthorizedCaseAccessException;
+import co.tz.sheriaconnectapi.exceptions.ErrorMessages;
 import co.tz.sheriaconnectapi.model.Entities.IncidentReport;
 import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.model.Enums.AccessContext;
@@ -76,6 +77,22 @@ public class IncidentReportAccessService {
         throw new UnauthorizedCaseAccessException();
     }
 
+    public boolean isStaffSession(Authentication authentication) {
+        try {
+            return authenticatedUserResolver.requireContext(authentication) == AccessContext.STAFF;
+        } catch (RuntimeException ex) {
+            return false;
+        }
+    }
+
+    public boolean hasAuthority(Authentication authentication, String authorityName) {
+        return authentication != null
+                && authentication.getAuthorities() != null
+                && authentication.getAuthorities()
+                .stream()
+                .anyMatch(authority -> authorityName.equals(authority.getAuthority()));
+    }
+
     public void assertStaffNotSelf(
             IncidentReport report,
             Authentication authentication
@@ -85,7 +102,9 @@ public class IncidentReportAccessService {
                 && report.getReporterUser() != null
                 && report.getReporterUser().getId().equals(actor.get().getId())
                 && !hasActiveStaffRole(actor.get(), "SUPER_ADMIN")) {
-            throw new UnauthorizedCaseAccessException();
+            throw new UnauthorizedCaseAccessException(
+                    ErrorMessages.STAFF_SELF_REVIEW_DENIED.getMessage()
+            );
         }
     }
 

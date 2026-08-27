@@ -1,6 +1,7 @@
 package co.tz.sheriaconnectapi.services.IncidentReportServices;
 
 import co.tz.sheriaconnectapi.exceptions.EvidenceFileTooLargeException;
+import co.tz.sheriaconnectapi.exceptions.EvidenceFileNotFoundException;
 import co.tz.sheriaconnectapi.exceptions.EvidenceStorageException;
 import co.tz.sheriaconnectapi.exceptions.MissingEvidenceFileException;
 import co.tz.sheriaconnectapi.exceptions.UnsupportedEvidenceTypeException;
@@ -94,6 +95,26 @@ public class EvidenceStorageService {
         } catch (IOException ex) {
             throw new EvidenceStorageException();
         }
+    }
+
+    public Path resolveForDownload(EvidenceFile evidenceFile) {
+        if (evidenceFile == null
+                || evidenceFile.getRelativePath() == null
+                || evidenceFile.getRelativePath().isBlank()) {
+            throw new EvidenceFileNotFoundException();
+        }
+
+        Path relativePath = Path.of(evidenceFile.getRelativePath()).normalize();
+        if (relativePath.isAbsolute() || relativePath.startsWith("..")) {
+            throw new EvidenceStorageException();
+        }
+
+        Path absolutePath = storageRoot.resolve(relativePath).normalize();
+        if (!absolutePath.startsWith(storageRoot) || !Files.isRegularFile(absolutePath)) {
+            throw new EvidenceFileNotFoundException();
+        }
+
+        return absolutePath;
     }
 
     private String sanitizeOriginalName(String originalFileName) {

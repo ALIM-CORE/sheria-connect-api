@@ -4,4 +4,8 @@ public class UnauthorizedCaseAccessException extends RuntimeException {
     public UnauthorizedCaseAccessException() {
         super(ErrorMessages.UNAUTHORIZED_CASE_ACCESS.getMessage());
     }
+
+    public UnauthorizedCaseAccessException(String message) {
+        super(message);
+    }
 }

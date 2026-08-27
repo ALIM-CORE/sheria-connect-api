@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -41,10 +42,11 @@ public class CaseMessageController {
     @GetMapping("/incident-reports/{caseNumber}/messages")
     public ResponseEntity<StandardResponse<List<CaseMessageResponse>>> listCitizenMessages(
             @PathVariable String caseNumber,
+            @RequestParam(required = false) Long afterId,
             Authentication authentication
     ) {
         return listCitizenCaseMessagesService.execute(
-                new CaseMessageInput(caseNumber, null, null, authentication)
+                new CaseMessageInput(caseNumber, null, afterId, null, authentication)
         );
     }
 
@@ -55,17 +57,18 @@ public class CaseMessageController {
             Authentication authentication
     ) {
         return sendCitizenCaseMessageService.execute(
-                new CaseMessageInput(caseNumber, null, request, authentication)
+                new CaseMessageInput(caseNumber, null, null, request, authentication)
         );
     }
 
     @GetMapping("/provider/case-requests/{matchingRequestId}/messages")
     public ResponseEntity<StandardResponse<List<CaseMessageResponse>>> listProviderMessages(
             @PathVariable Long matchingRequestId,
+            @RequestParam(required = false) Long afterId,
             Authentication authentication
     ) {
         return listProviderCaseMessagesService.execute(
-                new CaseMessageInput(null, matchingRequestId, null, authentication)
+                new CaseMessageInput(null, matchingRequestId, afterId, null, authentication)
         );
     }
 
@@ -76,7 +79,7 @@ public class CaseMessageController {
             Authentication authentication
     ) {
         return sendProviderCaseMessageService.execute(
-                new CaseMessageInput(null, matchingRequestId, request, authentication)
+                new CaseMessageInput(null, matchingRequestId, null, request, authentication)
         );
     }
 }
