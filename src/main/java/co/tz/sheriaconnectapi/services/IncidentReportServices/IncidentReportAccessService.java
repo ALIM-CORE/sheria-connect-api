@@ -102,9 +102,7 @@ public class IncidentReportAccessService {
                 && report.getReporterUser() != null
                 && report.getReporterUser().getId().equals(actor.get().getId())
                 && !hasActiveStaffRole(actor.get(), "SUPER_ADMIN")) {
-            throw new UnauthorizedCaseAccessException(
-                    ErrorMessages.STAFF_SELF_REVIEW_DENIED.getMessage()
-            );
+            throw new UnauthorizedCaseAccessException(ErrorMessages.STAFF_SELF_REVIEW_DENIED);
         }
     }
 

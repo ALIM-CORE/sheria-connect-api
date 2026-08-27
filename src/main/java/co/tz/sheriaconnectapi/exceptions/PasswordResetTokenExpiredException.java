@@ -5,9 +5,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 
 @ResponseStatus(value = HttpStatus.BAD_REQUEST)
 public class PasswordResetTokenExpiredException
-        extends RuntimeException {
+        extends DomainException {
 
     public PasswordResetTokenExpiredException() {
-        super(ErrorMessages.PASSWORD_RESET_TOKEN_EXPIRED.getMessage());
+        super(ErrorMessages.PASSWORD_RESET_TOKEN_EXPIRED);
     }
 }

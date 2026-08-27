@@ -13,6 +13,7 @@ public class StandardResponse<T> {
     private final String message;
     private final T body;
     private final String error;
+    private final String code;
     private final Instant timestamp;
 
     public StandardResponse(
@@ -21,10 +22,21 @@ public class StandardResponse<T> {
             T body,
             String error
     ) {
+        this(success, message, body, error, null);
+    }
+
+    public StandardResponse(
+            boolean success,
+            String message,
+            T body,
+            String error,
+            String code
+    ) {
         this.success = success;
         this.message = message;
         this.body = body;
         this.error = error;
+        this.code = code;
         this.timestamp = Instant.now();
     }
 }

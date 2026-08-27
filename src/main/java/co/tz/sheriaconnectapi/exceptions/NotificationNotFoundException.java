@@ -1,7 +1,7 @@
 package co.tz.sheriaconnectapi.exceptions;
 
-public class NotificationNotFoundException extends RuntimeException {
+public class NotificationNotFoundException extends DomainException {
     public NotificationNotFoundException() {
-        super(ErrorMessages.NOTIFICATION_NOT_FOUND.getMessage());
+        super(ErrorMessages.NOTIFICATION_NOT_FOUND);
     }
 }

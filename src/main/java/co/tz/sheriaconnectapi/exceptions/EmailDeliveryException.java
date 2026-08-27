@@ -1,8 +1,8 @@
 package co.tz.sheriaconnectapi.exceptions;
 
-public class EmailDeliveryException extends RuntimeException {
+public class EmailDeliveryException extends DomainException {
 
     public EmailDeliveryException(Throwable cause) {
-        super(ErrorMessages.EMAIL_DELIVERY_FAILED.getMessage(), cause);
+        super(ErrorMessages.EMAIL_DELIVERY_FAILED, cause);
     }
 }

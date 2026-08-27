@@ -1,5 +1,6 @@
 package co.tz.sheriaconnectapi.security.Handlers;
 
+import co.tz.sheriaconnectapi.exceptions.ErrorMessages;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -27,7 +28,7 @@ public class ApiAccessDeniedHandler implements AccessDeniedHandler {
         responseWriter.write(
                 response,
                 HttpServletResponse.SC_FORBIDDEN,
-                "Access denied"
+                ErrorMessages.ACCESS_DENIED
         );
     }
 }

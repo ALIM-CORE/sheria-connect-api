@@ -1,7 +1,7 @@
 package co.tz.sheriaconnectapi.exceptions;
 
-public class UnauthorizedStoryAccessException extends RuntimeException {
+public class UnauthorizedStoryAccessException extends DomainException {
     public UnauthorizedStoryAccessException() {
-        super(ErrorMessages.UNAUTHORIZED_STORY_ACCESS.getMessage());
+        super(ErrorMessages.UNAUTHORIZED_STORY_ACCESS);
     }
 }

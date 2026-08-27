@@ -73,11 +73,11 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
     public ResponseEntity<StandardResponse<Map<String, Object>>> execute(RefreshInput input) {
         String tokenValue = extractRefreshToken(input.getRequest(), input.getBody());
         if (tokenValue == null) {
-            throw new InvalidTokenException(ErrorMessages.MISSING_TOKEN.getMessage());
+            throw new InvalidTokenException(ErrorMessages.MISSING_TOKEN);
         }
 
         RefreshToken storedToken = refreshTokenRepository.findByToken(tokenValue)
-                .orElseThrow(() -> new InvalidTokenException(ErrorMessages.INVALID_TOKEN.getMessage()));
+                .orElseThrow(() -> new InvalidTokenException(ErrorMessages.INVALID_TOKEN));
         Instant now = Instant.now();
         if (storedToken.isRevoked()) {
             return reuseRecentlyRotatedToken(input, storedToken, now);
@@ -112,7 +112,7 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
     ) {
         RefreshToken replacement = storedToken.getReplacedByToken();
         if (!isWithinReuseGrace(storedToken, replacement, now)) {
-            throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN.getMessage());
+            throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN);
         }
 
         RefreshContext context = validateUsableToken(replacement, now);
@@ -144,7 +144,7 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
                 || session == null
                 || session.isRevoked()
                 || session.getExpiresAt().isBefore(now)) {
-            throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN.getMessage());
+            throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN);
         }
 
         User user = token.getUser();
@@ -152,7 +152,7 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
             session.setRevoked(true);
             authSessionRepository.save(session);
             revoke(token);
-            throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN.getMessage());
+            throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN);
         }
         if (session.getActiveContext() == co.tz.sheriaconnectapi.model.Enums.AccessContext.STAFF
                 && !session.isMfaVerified()) {
@@ -164,7 +164,7 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
             session.setRevoked(true);
             authSessionRepository.save(session);
             revoke(token);
-            throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN.getMessage());
+            throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN);
         }
 
         return new RefreshContext(user, session, effectiveAccess);

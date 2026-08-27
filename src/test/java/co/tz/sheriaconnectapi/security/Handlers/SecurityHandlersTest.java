@@ -41,6 +41,7 @@ class SecurityHandlersTest {
         assertTrue(response.getContentType().startsWith("application/json"));
         assertTrue(response.getContentAsString().contains("\"success\":false"));
         assertTrue(response.getContentAsString().contains("Authentication is required"));
+        assertTrue(response.getContentAsString().contains("\"code\":\"AUTHENTICATION_REQUIRED\""));
     }
 
     @Test
@@ -57,5 +58,6 @@ class SecurityHandlersTest {
         assertTrue(response.getContentType().startsWith("application/json"));
         assertTrue(response.getContentAsString().contains("\"success\":false"));
         assertTrue(response.getContentAsString().contains("Access denied"));
+        assertTrue(response.getContentAsString().contains("\"code\":\"ACCESS_DENIED\""));
     }
 }

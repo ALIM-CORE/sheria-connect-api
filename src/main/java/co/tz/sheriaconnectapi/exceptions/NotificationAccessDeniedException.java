@@ -1,7 +1,7 @@
 package co.tz.sheriaconnectapi.exceptions;
 
-public class NotificationAccessDeniedException extends RuntimeException {
+public class NotificationAccessDeniedException extends DomainException {
     public NotificationAccessDeniedException() {
-        super("You are not allowed to access this notification");
+        super(ErrorMessages.NOTIFICATION_ACCESS_DENIED);
     }
 }

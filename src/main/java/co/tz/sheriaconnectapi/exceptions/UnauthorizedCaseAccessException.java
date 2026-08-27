@@ -1,11 +1,11 @@
 package co.tz.sheriaconnectapi.exceptions;
 
-public class UnauthorizedCaseAccessException extends RuntimeException {
+public class UnauthorizedCaseAccessException extends DomainException {
     public UnauthorizedCaseAccessException() {
-        super(ErrorMessages.UNAUTHORIZED_CASE_ACCESS.getMessage());
+        super(ErrorMessages.UNAUTHORIZED_CASE_ACCESS);
     }
 
-    public UnauthorizedCaseAccessException(String message) {
-        super(message);
+    public UnauthorizedCaseAccessException(ErrorMessages error) {
+        super(error);
     }
 }

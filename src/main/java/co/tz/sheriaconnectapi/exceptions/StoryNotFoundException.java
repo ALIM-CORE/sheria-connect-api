@@ -1,7 +1,7 @@
 package co.tz.sheriaconnectapi.exceptions;
 
-public class StoryNotFoundException extends RuntimeException {
+public class StoryNotFoundException extends DomainException {
     public StoryNotFoundException() {
-        super(ErrorMessages.STORY_NOT_FOUND.getMessage());
+        super(ErrorMessages.STORY_NOT_FOUND);
     }
 }

@@ -1,7 +1,7 @@
 package co.tz.sheriaconnectapi.exceptions;
 
-public class InvalidCaseNumberException extends RuntimeException {
+public class InvalidCaseNumberException extends DomainException {
     public InvalidCaseNumberException() {
-        super(ErrorMessages.INVALID_CASE_NUMBER.getMessage());
+        super(ErrorMessages.INVALID_CASE_NUMBER);
     }
 }

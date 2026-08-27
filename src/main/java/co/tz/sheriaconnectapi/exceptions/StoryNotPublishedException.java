@@ -1,7 +1,7 @@
 package co.tz.sheriaconnectapi.exceptions;
 
-public class StoryNotPublishedException extends RuntimeException {
+public class StoryNotPublishedException extends DomainException {
     public StoryNotPublishedException() {
-        super(ErrorMessages.STORY_NOT_PUBLISHED.getMessage());
+        super(ErrorMessages.STORY_NOT_PUBLISHED);
     }
 }

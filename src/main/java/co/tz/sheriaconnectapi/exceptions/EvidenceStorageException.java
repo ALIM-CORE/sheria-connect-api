@@ -1,7 +1,7 @@
 package co.tz.sheriaconnectapi.exceptions;
 
-public class EvidenceStorageException extends RuntimeException {
+public class EvidenceStorageException extends DomainException {
     public EvidenceStorageException() {
-        super(ErrorMessages.EVIDENCE_STORAGE_FAILED.getMessage());
+        super(ErrorMessages.EVIDENCE_STORAGE_FAILED);
     }
 }

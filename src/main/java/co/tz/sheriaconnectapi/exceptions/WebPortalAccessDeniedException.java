@@ -1,7 +1,7 @@
 package co.tz.sheriaconnectapi.exceptions;
 
-public class WebPortalAccessDeniedException extends RuntimeException {
+public class WebPortalAccessDeniedException extends DomainException {
     public WebPortalAccessDeniedException() {
-        super(ErrorMessages.WEB_PORTAL_ACCESS_DENIED.getMessage());
+        super(ErrorMessages.WEB_PORTAL_ACCESS_DENIED);
     }
 }

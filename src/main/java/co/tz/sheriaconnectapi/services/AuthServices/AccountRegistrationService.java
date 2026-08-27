@@ -65,7 +65,7 @@ public class AccountRegistrationService {
         normalize(user);
 
         if (userRepository.existsByEmail(user.getEmail())) {
-            throw new UserNotValidException(ErrorMessages.EMAIL_ALREADY_EXISTS.getMessage());
+            throw new UserNotValidException(ErrorMessages.EMAIL_ALREADY_EXISTS);
         }
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));

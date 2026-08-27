@@ -1,7 +1,7 @@
 package co.tz.sheriaconnectapi.exceptions;
 
-public class AuthenticationRequiredException extends RuntimeException {
+public class AuthenticationRequiredException extends DomainException {
     public AuthenticationRequiredException() {
-        super("Authentication is required");
+        super(ErrorMessages.AUTHENTICATION_REQUIRED);
     }
 }

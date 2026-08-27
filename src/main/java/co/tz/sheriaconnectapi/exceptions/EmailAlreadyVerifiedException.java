@@ -1,9 +1,9 @@
 package co.tz.sheriaconnectapi.exceptions;
 
 public class EmailAlreadyVerifiedException
-        extends RuntimeException {
+        extends DomainException {
 
     public EmailAlreadyVerifiedException() {
-        super(ErrorMessages.EMAIL_ALREADY_VERIFIED.getMessage());
+        super(ErrorMessages.EMAIL_ALREADY_VERIFIED);
     }
 }

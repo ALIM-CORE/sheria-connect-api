@@ -1,9 +1,9 @@
 package co.tz.sheriaconnectapi.exceptions;
 
 public class EmailNotVerifiedException
-        extends RuntimeException{
+        extends DomainException{
 
     public EmailNotVerifiedException() {
-        super(ErrorMessages.EMAIL_NOT_VERIFIED.getMessage());
+        super(ErrorMessages.EMAIL_NOT_VERIFIED);
     }
 }
