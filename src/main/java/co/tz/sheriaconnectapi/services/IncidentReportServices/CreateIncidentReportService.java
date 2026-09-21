@@ -12,6 +12,7 @@ import co.tz.sheriaconnectapi.model.Enums.AnonymityMode;
 import co.tz.sheriaconnectapi.model.Enums.IncidentReportStatus;
 import co.tz.sheriaconnectapi.repositories.CaseStatusHistoryRepository;
 import co.tz.sheriaconnectapi.repositories.IncidentReportRepository;
+import co.tz.sheriaconnectapi.services.IncidentCategoryServices.IncidentCategoryValidationService;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,7 @@ public class CreateIncidentReportService
     private final TrackingTokenService trackingTokenService;
     private final IncidentReportAccessService accessService;
     private final IncidentReportResponseFactory responseFactory;
+    private final IncidentCategoryValidationService incidentCategoryValidationService;
 
     public CreateIncidentReportService(
             IncidentReportRepository incidentReportRepository,
@@ -37,7 +39,8 @@ public class CreateIncidentReportService
             CaseNumberGeneratorService caseNumberGeneratorService,
             TrackingTokenService trackingTokenService,
             IncidentReportAccessService accessService,
-            IncidentReportResponseFactory responseFactory
+            IncidentReportResponseFactory responseFactory,
+            IncidentCategoryValidationService incidentCategoryValidationService
     ) {
         this.incidentReportRepository = incidentReportRepository;
         this.caseStatusHistoryRepository = caseStatusHistoryRepository;
@@ -45,6 +48,7 @@ public class CreateIncidentReportService
         this.trackingTokenService = trackingTokenService;
         this.accessService = accessService;
         this.responseFactory = responseFactory;
+        this.incidentCategoryValidationService = incidentCategoryValidationService;
     }
 
     @Override
@@ -66,7 +70,9 @@ public class CreateIncidentReportService
                 ? null
                 : trackingTokenService.hash(trackingToken));
         report.setAnonymityMode(request.getAnonymityMode());
-        report.setIncidentType(request.getIncidentType());
+        report.setIncidentType(
+                incidentCategoryValidationService.requireSelectable(request.getIncidentType())
+        );
         report.setUrgency(request.getUrgency());
         report.setStatus(IncidentReportStatus.SUBMITTED);
         report.setTitle(trimToNull(request.getTitle()));

@@ -2,7 +2,6 @@ package co.tz.sheriaconnectapi.model.Entities;
 
 import co.tz.sheriaconnectapi.model.Enums.AnonymityMode;
 import co.tz.sheriaconnectapi.model.Enums.IncidentReportStatus;
-import co.tz.sheriaconnectapi.model.Enums.IncidentType;
 import co.tz.sheriaconnectapi.model.Enums.IncidentUrgency;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -48,9 +47,8 @@ public class IncidentReport {
     @Column(name = "anonymity_mode", nullable = false, length = 32)
     private AnonymityMode anonymityMode;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "incident_type", nullable = false, length = 64)
-    private IncidentType incidentType;
+    private String incidentType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)

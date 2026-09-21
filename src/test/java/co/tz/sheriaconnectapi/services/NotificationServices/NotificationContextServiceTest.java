@@ -100,6 +100,7 @@ class NotificationContextServiceTest {
                 NotificationType.MATCHING_REQUEST_CREATED,
                 "New request",
                 "A request is waiting.",
+                NotificationTemplates.matchingRequestCreated(),
                 "CASE_REQUEST",
                 "14"
         );
@@ -107,6 +108,10 @@ class NotificationContextServiceTest {
         var captor = org.mockito.ArgumentCaptor.forClass(UserNotification.class);
         verify(notificationRepository).save(captor.capture());
         assertEquals(AccessContext.PROVIDER, captor.getValue().getContext());
+        assertEquals(
+                "matchingRequestCreated.title",
+                captor.getValue().getTitleKey()
+        );
     }
 
     private UserNotification notification(User owner, AccessContext context) {

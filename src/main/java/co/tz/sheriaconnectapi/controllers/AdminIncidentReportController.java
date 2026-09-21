@@ -12,7 +12,6 @@ import co.tz.sheriaconnectapi.model.DTOs.UpdateIncidentReportStatusInput;
 import co.tz.sheriaconnectapi.model.DTOs.UpdateIncidentReportStatusRequest;
 import co.tz.sheriaconnectapi.model.Enums.AnonymityMode;
 import co.tz.sheriaconnectapi.model.Enums.IncidentReportStatus;
-import co.tz.sheriaconnectapi.model.Enums.IncidentType;
 import co.tz.sheriaconnectapi.model.Enums.IncidentUrgency;
 import co.tz.sheriaconnectapi.services.IncidentReportServices.AdminListIncidentReportsService;
 import co.tz.sheriaconnectapi.services.IncidentReportServices.CreateAdminCaseNoteService;
@@ -34,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 @RestController
@@ -65,7 +65,7 @@ public class AdminIncidentReportController {
     public ResponseEntity<StandardResponse<List<IncidentReportSummaryResponse>>> list(
             @RequestParam(required = false) IncidentReportStatus status,
             @RequestParam(required = false) IncidentUrgency urgency,
-            @RequestParam(required = false) IncidentType incidentType,
+            @RequestParam(required = false) String incidentType,
             @RequestParam(required = false) AnonymityMode anonymityMode,
             @RequestParam(required = false) Boolean matchingRequested,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant createdFrom,
@@ -75,7 +75,7 @@ public class AdminIncidentReportController {
                 new AdminIncidentReportSearchInput(
                         status,
                         urgency,
-                        incidentType,
+                        normalizeCategory(incidentType),
                         anonymityMode,
                         matchingRequested,
                         createdFrom,
@@ -126,5 +126,12 @@ public class AdminIncidentReportController {
         if (caseNumber == null || !CASE_NUMBER_PATTERN.matcher(caseNumber).matches()) {
             throw new InvalidCaseNumberException();
         }
+    }
+
+    private String normalizeCategory(String incidentType) {
+        if (incidentType == null || incidentType.isBlank()) {
+            return null;
+        }
+        return incidentType.trim().toUpperCase(Locale.ROOT);
     }
 }

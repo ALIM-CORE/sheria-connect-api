@@ -10,6 +10,7 @@ import co.tz.sheriaconnectapi.model.Enums.NotificationType;
 import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.repositories.CaseMessageRepository;
 import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
+import co.tz.sheriaconnectapi.services.NotificationServices.NotificationTemplates;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -54,6 +55,7 @@ public class SendCitizenCaseMessageService implements Command<CaseMessageInput, 
                 NotificationType.CASE_MESSAGE_CREATED,
                 "New case message",
                 "A citizen sent a message on case " + context.report().getCaseNumber() + ".",
+                NotificationTemplates.caseMessageFromCitizen(context.report().getCaseNumber()),
                 "CASE_REQUEST",
                 String.valueOf(context.matchRequest().getId())
         );

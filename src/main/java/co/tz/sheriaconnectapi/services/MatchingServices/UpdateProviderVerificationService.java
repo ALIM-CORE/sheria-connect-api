@@ -13,6 +13,7 @@ import co.tz.sheriaconnectapi.repositories.ProviderProfileRepository;
 import co.tz.sheriaconnectapi.repositories.UserRepository;
 import co.tz.sheriaconnectapi.exceptions.AccessManagementException;
 import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
+import co.tz.sheriaconnectapi.services.NotificationServices.NotificationTemplates;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -84,6 +85,9 @@ public class UpdateProviderVerificationService
                 "Provider verification updated",
                 "Your provider profile is now "
                         + saved.getVerificationStatus().name().toLowerCase().replace('_', ' ') + ".",
+                NotificationTemplates.providerVerification(
+                        saved.getVerificationStatus().name()
+                ),
                 "PROVIDER_PROFILE",
                 String.valueOf(saved.getId())
         );

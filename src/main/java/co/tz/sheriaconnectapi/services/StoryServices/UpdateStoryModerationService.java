@@ -14,6 +14,7 @@ import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.model.Enums.StoryModerationStatus;
 import co.tz.sheriaconnectapi.repositories.PublicStoryRepository;
 import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
+import co.tz.sheriaconnectapi.services.NotificationServices.NotificationTemplates;
 import co.tz.sheriaconnectapi.security.Access.AuthenticatedUserResolver;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
@@ -76,6 +77,10 @@ public class UpdateStoryModerationService implements Command<UpdateStoryModerati
                 "Story moderation updated",
                 "Your story \"" + savedStory.getTitle() + "\" is now "
                         + savedStory.getModerationStatus().name().toLowerCase().replace('_', ' ') + ".",
+                NotificationTemplates.storyModeration(
+                        savedStory.getTitle(),
+                        savedStory.getModerationStatus().name()
+                ),
                 "STORY",
                 savedStory.getPublicId()
         );

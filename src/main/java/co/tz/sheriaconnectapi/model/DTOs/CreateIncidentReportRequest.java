@@ -1,7 +1,6 @@
 package co.tz.sheriaconnectapi.model.DTOs;
 
 import co.tz.sheriaconnectapi.model.Enums.AnonymityMode;
-import co.tz.sheriaconnectapi.model.Enums.IncidentType;
 import co.tz.sheriaconnectapi.model.Enums.IncidentUrgency;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,7 +12,7 @@ import java.time.LocalDate;
 @Setter
 public class CreateIncidentReportRequest {
     private AnonymityMode anonymityMode;
-    private IncidentType incidentType;
+    private String incidentType;
     private IncidentUrgency urgency;
     private String title;
     private String description;

@@ -16,6 +16,7 @@ import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.repositories.CaseStatusHistoryRepository;
 import co.tz.sheriaconnectapi.repositories.IncidentReportRepository;
 import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
+import co.tz.sheriaconnectapi.services.NotificationServices.NotificationTemplates;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -142,6 +143,10 @@ public class UpdateIncidentReportStatusService
                     "Case status updated",
                     "Case " + report.getCaseNumber() + " is now "
                             + newStatus.name().toLowerCase().replace('_', ' ') + ".",
+                    NotificationTemplates.caseStatusChanged(
+                            report.getCaseNumber(),
+                            newStatus.name()
+                    ),
                     "INCIDENT_REPORT",
                     report.getCaseNumber()
             );

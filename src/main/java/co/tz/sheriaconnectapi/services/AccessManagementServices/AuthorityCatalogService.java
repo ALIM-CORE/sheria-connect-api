@@ -28,7 +28,8 @@ public class AuthorityCatalogService implements Query<Void, List<AuthorityCatalo
             "CASEMATCHREQUEST",
             "PUBLICSTORY",
             "STORYCONTENTREPORT",
-            "STORYMODERATIONNOTE"
+            "STORYMODERATIONNOTE",
+            "INCIDENTCATEGORY"
     );
 
     private static final Map<String, String> RESOURCE_LABELS = Map.ofEntries(
@@ -43,7 +44,8 @@ public class AuthorityCatalogService implements Query<Void, List<AuthorityCatalo
             Map.entry("CASEMATCHREQUEST", "Provider Matching"),
             Map.entry("PUBLICSTORY", "Public Stories"),
             Map.entry("STORYCONTENTREPORT", "Reported Story Content"),
-            Map.entry("STORYMODERATIONNOTE", "Story Moderation Notes")
+            Map.entry("STORYMODERATIONNOTE", "Story Moderation Notes"),
+            Map.entry("INCIDENTCATEGORY", "Incident Categories")
     );
 
     private static final Map<String, String> ACTION_LABELS = Map.of(
@@ -80,6 +82,9 @@ public class AuthorityCatalogService implements Query<Void, List<AuthorityCatalo
         }
         String resource = name.substring(0, separator);
         String action = name.substring(separator + 1);
+        if ("INCIDENTCATEGORY".equals(resource) && "DELETE".equals(action)) {
+            return null;
+        }
         if (!VISIBLE_RESOURCES.contains(resource) || !ACTION_LABELS.containsKey(action)) {
             return null;
         }
@@ -101,7 +106,7 @@ public class AuthorityCatalogService implements Query<Void, List<AuthorityCatalo
         return switch (resource) {
             case "USER", "ROLE", "AUTHORITY" -> "Access Management";
             case "INCIDENTREPORT", "EVIDENCEFILE", "CASESTATUSHISTORY", "ADMINCASENOTE",
-                 "CASEMATCHREQUEST" -> "Case Operations";
+                 "CASEMATCHREQUEST", "INCIDENTCATEGORY" -> "Case Operations";
             case "PROVIDERPROFILE" -> "Provider Operations";
             default -> "Story Moderation";
         };

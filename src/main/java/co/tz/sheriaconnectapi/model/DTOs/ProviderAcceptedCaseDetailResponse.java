@@ -5,7 +5,6 @@ import co.tz.sheriaconnectapi.model.Entities.EvidenceFile;
 import co.tz.sheriaconnectapi.model.Entities.IncidentReport;
 import co.tz.sheriaconnectapi.model.Enums.AnonymityMode;
 import co.tz.sheriaconnectapi.model.Enums.IncidentReportStatus;
-import co.tz.sheriaconnectapi.model.Enums.IncidentType;
 import co.tz.sheriaconnectapi.model.Enums.IncidentUrgency;
 import lombok.Getter;
 
@@ -17,7 +16,7 @@ import java.util.List;
 public class ProviderAcceptedCaseDetailResponse {
     private final String caseNumber;
     private final AnonymityMode anonymityMode;
-    private final IncidentType incidentType;
+    private final String incidentType;
     private final IncidentUrgency urgency;
     private final IncidentReportStatus status;
     private final String title;

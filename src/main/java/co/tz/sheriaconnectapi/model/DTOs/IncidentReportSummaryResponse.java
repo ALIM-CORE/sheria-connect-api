@@ -3,7 +3,6 @@ package co.tz.sheriaconnectapi.model.DTOs;
 import co.tz.sheriaconnectapi.model.Entities.IncidentReport;
 import co.tz.sheriaconnectapi.model.Enums.AnonymityMode;
 import co.tz.sheriaconnectapi.model.Enums.IncidentReportStatus;
-import co.tz.sheriaconnectapi.model.Enums.IncidentType;
 import co.tz.sheriaconnectapi.model.Enums.IncidentUrgency;
 import lombok.Getter;
 
@@ -15,7 +14,7 @@ public class IncidentReportSummaryResponse {
     private final Long reporterUserId;
     private final String reporterEmail;
     private final AnonymityMode anonymityMode;
-    private final IncidentType incidentType;
+    private final String incidentType;
     private final IncidentUrgency urgency;
     private final IncidentReportStatus status;
     private final String title;

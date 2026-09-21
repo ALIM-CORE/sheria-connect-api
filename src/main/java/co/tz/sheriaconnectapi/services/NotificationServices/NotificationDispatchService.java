@@ -22,6 +22,7 @@ public class NotificationDispatchService {
             NotificationType type,
             String title,
             String body,
+            NotificationTemplate template,
             String linkType,
             String linkTarget
     ) {
@@ -35,6 +36,11 @@ public class NotificationDispatchService {
         notification.setType(type);
         notification.setTitle(title);
         notification.setBody(body);
+        if (template != null) {
+            notification.setTitleKey(template.titleKey());
+            notification.setBodyKey(template.bodyKey());
+            notification.setParams(template.params());
+        }
         notification.setLinkType(linkType);
         notification.setLinkTarget(linkTarget);
         userNotificationRepository.save(notification);

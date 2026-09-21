@@ -18,8 +18,11 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.Map;
 
 @Entity
 @Table(
@@ -56,6 +59,16 @@ public class UserNotification {
 
     @Column(columnDefinition = "TEXT")
     private String body;
+
+    @Column(name = "title_key", length = 120)
+    private String titleKey;
+
+    @Column(name = "body_key", length = 120)
+    private String bodyKey;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private Map<String, String> params;
 
     @Column(name = "link_type", length = 64)
     private String linkType;

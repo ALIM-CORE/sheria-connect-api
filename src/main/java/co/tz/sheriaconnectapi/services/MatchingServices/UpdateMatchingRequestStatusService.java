@@ -21,6 +21,7 @@ import co.tz.sheriaconnectapi.repositories.IncidentReportRepository;
 import co.tz.sheriaconnectapi.repositories.ProviderProfileRepository;
 import co.tz.sheriaconnectapi.security.Access.AuthenticatedUserResolver;
 import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
+import co.tz.sheriaconnectapi.services.NotificationServices.NotificationTemplates;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -123,6 +124,10 @@ public class UpdateMatchingRequestStatusService
                 NotificationType.MATCHING_REQUEST_UPDATED,
                 "Matching request " + toStatus.name().toLowerCase().replace('_', ' '),
                 "A provider updated a matching request for case " + report.getCaseNumber() + ".",
+                NotificationTemplates.matchingRequestUpdated(
+                        report.getCaseNumber(),
+                        toStatus.name()
+                ),
                 "INCIDENT_REPORT",
                 report.getCaseNumber()
         );

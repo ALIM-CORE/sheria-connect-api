@@ -109,6 +109,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/stories/*/reports").permitAll()
                         .requestMatchers(HttpMethod.GET, "/knowledge/articles").permitAll()
                         .requestMatchers(HttpMethod.GET, "/knowledge/articles/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/incident-categories").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exceptions -> exceptions

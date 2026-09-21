@@ -9,6 +9,7 @@ import co.tz.sheriaconnectapi.model.Entities.ProviderProfile;
 import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.model.Enums.ProviderVerificationStatus;
 import co.tz.sheriaconnectapi.repositories.ProviderProfileRepository;
+import co.tz.sheriaconnectapi.services.IncidentCategoryServices.IncidentCategoryValidationService;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.Locale;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,13 +26,16 @@ public class UpsertMyProviderProfileService
 
     private final ProviderProfileRepository providerProfileRepository;
     private final ProviderProfileAccessService providerProfileAccessService;
+    private final IncidentCategoryValidationService incidentCategoryValidationService;
 
     public UpsertMyProviderProfileService(
             ProviderProfileRepository providerProfileRepository,
-            ProviderProfileAccessService providerProfileAccessService
+            ProviderProfileAccessService providerProfileAccessService,
+            IncidentCategoryValidationService incidentCategoryValidationService
     ) {
         this.providerProfileRepository = providerProfileRepository;
         this.providerProfileAccessService = providerProfileAccessService;
+        this.incidentCategoryValidationService = incidentCategoryValidationService;
     }
 
     @Override
@@ -72,9 +77,14 @@ public class UpsertMyProviderProfileService
         ));
         profile.setNotes(null);
 
+        Set<String> existingSpecialties = Set.copyOf(profile.getSpecialties());
+        Set<String> validatedSpecialties = incidentCategoryValidationService.validateSpecialties(
+                request.getSpecialties(),
+                existingSpecialties
+        );
         profile.getSpecialties().clear();
         if (request.getSpecialties() != null) {
-            profile.getSpecialties().addAll(request.getSpecialties());
+            profile.getSpecialties().addAll(validatedSpecialties);
         }
 
         profile.getRegions().clear();

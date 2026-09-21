@@ -24,6 +24,7 @@ import co.tz.sheriaconnectapi.repositories.IncidentReportRepository;
 import co.tz.sheriaconnectapi.repositories.ProviderProfileRepository;
 import co.tz.sheriaconnectapi.security.Access.AuthenticatedUserResolver;
 import co.tz.sheriaconnectapi.services.NotificationServices.NotificationDispatchService;
+import co.tz.sheriaconnectapi.services.NotificationServices.NotificationTemplates;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
@@ -122,6 +123,7 @@ public class CreateMatchingRequestService
                 NotificationType.MATCHING_REQUEST_CREATED,
                 "New case request",
                 "A case request is waiting for your review.",
+                NotificationTemplates.matchingRequestCreated(),
                 "CASE_REQUEST",
                 String.valueOf(saved.getId())
         );

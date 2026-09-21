@@ -7,6 +7,7 @@ import org.springframework.http.HttpInputMessage;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -94,6 +95,17 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         assertError(response.getBody(), ErrorMessages.UNEXPECTED_ERROR);
+    }
+
+    @Test
+    void multipartLimitUsesCodedPayloadTooLargeResponse() {
+        ResponseEntity<StandardResponse<Void>> response =
+                handler.handleMultipartFileTooLarge(
+                        new MaxUploadSizeExceededException(10 * 1024 * 1024L)
+                );
+
+        assertEquals(HttpStatus.PAYLOAD_TOO_LARGE, response.getStatusCode());
+        assertError(response.getBody(), ErrorMessages.EVIDENCE_FILE_TOO_LARGE);
     }
 
     private void assertError(StandardResponse<Void> body, ErrorMessages error) {

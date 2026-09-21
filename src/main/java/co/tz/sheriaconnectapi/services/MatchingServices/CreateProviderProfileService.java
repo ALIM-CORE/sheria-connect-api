@@ -11,12 +11,14 @@ import co.tz.sheriaconnectapi.model.Enums.ProviderAvailabilityStatus;
 import co.tz.sheriaconnectapi.model.Enums.ProviderVerificationStatus;
 import co.tz.sheriaconnectapi.repositories.ProviderProfileRepository;
 import co.tz.sheriaconnectapi.repositories.UserRepository;
+import co.tz.sheriaconnectapi.services.IncidentCategoryServices.IncidentCategoryValidationService;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
@@ -26,13 +28,16 @@ public class CreateProviderProfileService
 
     private final ProviderProfileRepository providerProfileRepository;
     private final UserRepository userRepository;
+    private final IncidentCategoryValidationService incidentCategoryValidationService;
 
     public CreateProviderProfileService(
             ProviderProfileRepository providerProfileRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            IncidentCategoryValidationService incidentCategoryValidationService
     ) {
         this.providerProfileRepository = providerProfileRepository;
         this.userRepository = userRepository;
+        this.incidentCategoryValidationService = incidentCategoryValidationService;
     }
 
     @Override
@@ -86,7 +91,12 @@ public class CreateProviderProfileService
         providerProfile.setNotes(trimToNull(request.getNotes()));
 
         if (request.getSpecialties() != null) {
-            providerProfile.setSpecialties(request.getSpecialties());
+            providerProfile.setSpecialties(
+                    new HashSet<>(incidentCategoryValidationService.validateSpecialties(
+                            request.getSpecialties(),
+                            java.util.Set.of()
+                    ))
+            );
         }
 
         if (request.getRegions() != null) {

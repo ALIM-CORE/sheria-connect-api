@@ -9,6 +9,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -156,6 +157,13 @@ public class GlobalExceptionHandler {
         return ResponseUtil.error(ex, HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(IncidentCategoryNotFoundException.class)
+    public ResponseEntity<StandardResponse<Void>> handleIncidentCategoryNotFound(
+            IncidentCategoryNotFoundException ex
+    ) {
+        return ResponseUtil.error(ex, HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(EvidenceFileNotFoundException.class)
     public ResponseEntity<StandardResponse<Void>> handleEvidenceFileNotFound(
             EvidenceFileNotFoundException ex
@@ -238,7 +246,8 @@ public class GlobalExceptionHandler {
             InvalidStatusTransitionException.class,
             InvalidMatchingRequestStatusException.class,
             InvalidStoryModerationStatusException.class,
-            InvalidStoryContentException.class
+            InvalidStoryContentException.class,
+            InvalidIncidentCategoryException.class
     })
     public ResponseEntity<StandardResponse<Void>> handleBadCaseRequest(
             DomainException ex
@@ -253,11 +262,28 @@ public class GlobalExceptionHandler {
         return ResponseUtil.error(ex, HttpStatus.CONFLICT);
     }
 
+    @ExceptionHandler(DuplicateIncidentCategoryException.class)
+    public ResponseEntity<StandardResponse<Void>> handleDuplicateIncidentCategory(
+            DuplicateIncidentCategoryException ex
+    ) {
+        return ResponseUtil.error(ex, HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(EvidenceFileTooLargeException.class)
     public ResponseEntity<StandardResponse<Void>> handleEvidenceFileTooLarge(
             EvidenceFileTooLargeException ex
     ) {
         return ResponseUtil.error(ex, HttpStatus.PAYLOAD_TOO_LARGE);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<StandardResponse<Void>> handleMultipartFileTooLarge(
+            MaxUploadSizeExceededException ex
+    ) {
+        return ResponseUtil.error(
+                ErrorMessages.EVIDENCE_FILE_TOO_LARGE,
+                HttpStatus.PAYLOAD_TOO_LARGE
+        );
     }
 
     @ExceptionHandler(EvidenceStorageException.class)

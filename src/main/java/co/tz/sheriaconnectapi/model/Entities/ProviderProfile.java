@@ -1,6 +1,5 @@
 package co.tz.sheriaconnectapi.model.Entities;
 
-import co.tz.sheriaconnectapi.model.Enums.IncidentType;
 import co.tz.sheriaconnectapi.model.Enums.LegalServiceProviderType;
 import co.tz.sheriaconnectapi.model.Enums.PricingTier;
 import co.tz.sheriaconnectapi.model.Enums.ProviderAvailabilityStatus;
@@ -77,14 +76,13 @@ public class ProviderProfile {
     @Column(name = "verification_status", nullable = false, length = 32)
     private ProviderVerificationStatus verificationStatus = ProviderVerificationStatus.PENDING;
 
-    @ElementCollection(targetClass = IncidentType.class)
+    @ElementCollection
     @CollectionTable(
             name = "provider_profile_specialties",
             joinColumns = @JoinColumn(name = "provider_profile_id")
     )
-    @Enumerated(EnumType.STRING)
     @Column(name = "incident_type", nullable = false, length = 64)
-    private Set<IncidentType> specialties = new HashSet<>();
+    private Set<String> specialties = new HashSet<>();
 
     @ElementCollection
     @CollectionTable(

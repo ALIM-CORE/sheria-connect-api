@@ -77,6 +77,9 @@ public class BootstrapDataLoader implements CommandLineRunner {
         for (Class<?> entityClass : new Reflections(ENTITY_PACKAGE).getTypesAnnotatedWith(Entity.class)) {
             String entityName = entityClass.getSimpleName().toUpperCase(Locale.ROOT);
             for (String action : ACTIONS) {
+                if ("INCIDENTCATEGORY".equals(entityName) && "DELETE".equals(action)) {
+                    continue;
+                }
                 String name = entityName + "_" + action;
                 authorities.add(authorityRepository.findByName(name)
                         .orElseGet(() -> createAuthority(name)));
@@ -220,6 +223,7 @@ public class BootstrapDataLoader implements CommandLineRunner {
         authorities.addAll(caseManagerAuthorities());
         authorities.addAll(contentModeratorAuthorities());
         authorities.addAll(providerReviewerAuthorities());
+        authorities.addAll(createReadUpdate("INCIDENTCATEGORY"));
         return authorities;
     }
 

@@ -1,7 +1,6 @@
 package co.tz.sheriaconnectapi.model.DTOs;
 
 import co.tz.sheriaconnectapi.model.Entities.ProviderProfile;
-import co.tz.sheriaconnectapi.model.Enums.IncidentType;
 import co.tz.sheriaconnectapi.model.Enums.LegalServiceProviderType;
 import co.tz.sheriaconnectapi.model.Enums.PricingTier;
 import co.tz.sheriaconnectapi.model.Enums.ProviderAvailabilityStatus;
@@ -27,7 +26,7 @@ public class ProviderProfileResponse {
     private final String bio;
     private final ProviderVerificationStatus verificationStatus;
     private final String verificationRejectionReason;
-    private final Set<IncidentType> specialties;
+    private final Set<String> specialties;
     private final Set<String> regions;
     private final Set<String> languages;
     private final ProviderAvailabilityStatus availabilityStatus;
