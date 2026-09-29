@@ -7,6 +7,7 @@ public record CaseMessageInput(
         Long matchingRequestId,
         Long afterId,
         CaseMessageRequest request,
-        Authentication authentication
+        Authentication authentication,
+        String trackingToken
 ) {
 }

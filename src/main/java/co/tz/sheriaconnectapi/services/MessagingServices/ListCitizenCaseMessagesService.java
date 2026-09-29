@@ -31,7 +31,11 @@ public class ListCitizenCaseMessagesService
     public ResponseEntity<StandardResponse<List<CaseMessageResponse>>> execute(
             CaseMessageInput input
     ) {
-        var context = accessService.requireCitizenContext(input.caseNumber(), input.authentication());
+        var context = accessService.requireCitizenContext(
+                input.caseNumber(),
+                input.authentication(),
+                input.trackingToken()
+        );
         List<CaseMessageResponse> messages = citizenMessages(input, context)
                 .stream()
                 .map(CaseMessageResponse::new)

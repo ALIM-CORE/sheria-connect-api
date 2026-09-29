@@ -29,13 +29,20 @@ class ListCaseMessagesServiceTest {
     void citizenListUsesAfterIdCursorWhenProvided() {
         IncidentReport report = new IncidentReport();
         var context = new CaseMessageAccessService.CitizenMessageContext(null, report, null);
-        when(accessService.requireCitizenContext("SC-2608-ABC123", authentication))
+        when(accessService.requireCitizenContext("SC-2608-ABC123", authentication, "tracking-token"))
                 .thenReturn(context);
         when(caseMessageRepository.findByIncidentReportAndIdGreaterThanOrderByCreatedAtAsc(report, 17L))
                 .thenReturn(List.of());
 
         var service = new ListCitizenCaseMessagesService(accessService, caseMessageRepository);
-        service.execute(new CaseMessageInput("SC-2608-ABC123", null, 17L, null, authentication));
+        service.execute(new CaseMessageInput(
+                "SC-2608-ABC123",
+                null,
+                17L,
+                null,
+                authentication,
+                "tracking-token"
+        ));
 
         verify(caseMessageRepository)
                 .findByIncidentReportAndIdGreaterThanOrderByCreatedAtAsc(report, 17L);
@@ -51,7 +58,7 @@ class ListCaseMessagesServiceTest {
                 .thenReturn(List.of());
 
         var service = new ListProviderCaseMessagesService(accessService, caseMessageRepository);
-        service.execute(new CaseMessageInput(null, 42L, 19L, null, authentication));
+        service.execute(new CaseMessageInput(null, 42L, 19L, null, authentication, null));
 
         verify(caseMessageRepository)
                 .findByCaseMatchRequestAndIdGreaterThanOrderByCreatedAtAsc(request, 19L);

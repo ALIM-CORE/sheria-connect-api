@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -43,10 +44,11 @@ public class CaseMessageController {
     public ResponseEntity<StandardResponse<List<CaseMessageResponse>>> listCitizenMessages(
             @PathVariable String caseNumber,
             @RequestParam(required = false) Long afterId,
+            @RequestHeader(name = "X-Case-Tracking-Token", required = false) String trackingToken,
             Authentication authentication
     ) {
         return listCitizenCaseMessagesService.execute(
-                new CaseMessageInput(caseNumber, null, afterId, null, authentication)
+                new CaseMessageInput(caseNumber, null, afterId, null, authentication, trackingToken)
         );
     }
 
@@ -54,10 +56,11 @@ public class CaseMessageController {
     public ResponseEntity<StandardResponse<CaseMessageResponse>> sendCitizenMessage(
             @PathVariable String caseNumber,
             @RequestBody CaseMessageRequest request,
+            @RequestHeader(name = "X-Case-Tracking-Token", required = false) String trackingToken,
             Authentication authentication
     ) {
         return sendCitizenCaseMessageService.execute(
-                new CaseMessageInput(caseNumber, null, null, request, authentication)
+                new CaseMessageInput(caseNumber, null, null, request, authentication, trackingToken)
         );
     }
 
@@ -68,7 +71,7 @@ public class CaseMessageController {
             Authentication authentication
     ) {
         return listProviderCaseMessagesService.execute(
-                new CaseMessageInput(null, matchingRequestId, afterId, null, authentication)
+                new CaseMessageInput(null, matchingRequestId, afterId, null, authentication, null)
         );
     }
 
@@ -79,7 +82,7 @@ public class CaseMessageController {
             Authentication authentication
     ) {
         return sendProviderCaseMessageService.execute(
-                new CaseMessageInput(null, matchingRequestId, null, request, authentication)
+                new CaseMessageInput(null, matchingRequestId, null, request, authentication, null)
         );
     }
 }

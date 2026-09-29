@@ -40,7 +40,11 @@ public class SendCitizenCaseMessageService implements Command<CaseMessageInput, 
             throw new UserNotValidException("Message body is required");
         }
 
-        var context = accessService.requireCitizenContext(input.caseNumber(), input.authentication());
+        var context = accessService.requireCitizenContext(
+                input.caseNumber(),
+                input.authentication(),
+                input.trackingToken()
+        );
         CaseMessage message = new CaseMessage();
         message.setIncidentReport(context.report());
         message.setCaseMatchRequest(context.matchRequest());

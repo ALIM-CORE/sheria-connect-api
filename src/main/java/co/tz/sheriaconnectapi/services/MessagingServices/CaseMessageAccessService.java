@@ -15,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CaseMessageAccessService {
@@ -39,14 +40,16 @@ public class CaseMessageAccessService {
         this.authenticatedUserResolver = authenticatedUserResolver;
     }
 
-    public CitizenMessageContext requireCitizenContext(String caseNumber, Authentication authentication) {
-        User user = incidentReportAccessService.requireCitizenUser(authentication);
+    public CitizenMessageContext requireCitizenContext(
+            String caseNumber,
+            Authentication authentication,
+            String trackingToken
+    ) {
         IncidentReport report = incidentReportRepository.findByCaseNumber(caseNumber)
                 .orElseThrow(IncidentReportNotFoundException::new);
 
-        if (report.getReporterUser() == null || !report.getReporterUser().getId().equals(user.getId())) {
-            throw new CaseMessageAccessDeniedException();
-        }
+        incidentReportAccessService.assertCitizenAccess(report, authentication, trackingToken);
+        Optional<User> user = authenticatedUserResolver.authenticatedUser(authentication);
 
         List<CaseMatchRequest> accepted = caseMatchRequestRepository
                 .findByIncidentReportAndStatusOrderByCreatedAtAsc(
@@ -57,7 +60,7 @@ public class CaseMessageAccessService {
             throw new CaseMessageAccessDeniedException();
         }
 
-        return new CitizenMessageContext(user, report, accepted.getFirst());
+        return new CitizenMessageContext(user.orElse(null), report, accepted.getFirst());
     }
 
     public ProviderMessageContext requireProviderContext(Long matchingRequestId, Authentication authentication) {
