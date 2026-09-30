@@ -106,9 +106,9 @@ jobs:
       - name: Deploy pinned image through VPS deployment helper
         env:
           SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
-          HOST: ${{ secrets.SERVER_HOST }}
-          USER: ${{ secrets.SERVER_USER }}
+          KNOWN_HOSTS: ${{ vars.SERVER_KNOWN_HOSTS }}
+          HOST: ${{ vars.SERVER_HOST }}
+          USER: ${{ vars.SERVER_USER }}
           SERVER_PATH: ${{ vars.SERVER_PATH }}
           IMAGE_REF: ${{ needs.publish.outputs.image }}
         run: |

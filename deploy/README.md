@@ -75,8 +75,9 @@ For EACH of the four repositories:
 
 - Create the `production` GitHub Environment, restrict it to `main`, and configure approval if desired.
 - Repository variable: `PRODUCTION_DEPLOY_ENABLED=false`.
-- Production environment variable: `SERVER_PATH=/srv/apps/sheria-connect`.
-- Production secrets: `SERVER_HOST`, `SERVER_USER`, `SSH_PRIVATE_KEY`, `SSH_KNOWN_HOSTS`.
+- Production environment variables: `SERVER_HOST`, `SERVER_USER`, `SERVER_KNOWN_HOSTS`, and `SERVER_PATH=/srv/apps/sheria-connect`.
+- Production environment secret: `SSH_PRIVATE_KEY`.
+- `SERVER_KNOWN_HOSTS` must contain the verified SSH known-hosts entry, not just a fingerprint. Host/user/host-key values are public configuration; their integrity still matters.
 - Verify the SSH host fingerprint through a trusted VPS console/previously verified SSH connection; do not blindly trust `ssh-keyscan` output.
 - Use a dedicated deployment key/user with access to this directory and Docker.
 - Ensure each repository's Actions `GITHUB_TOKEN` can write its own GHCR package. For the existing backend/frontend packages, grant the repository Actions access in package settings if necessary. `NEW_PAT` is no longer used by CI.
