@@ -4,8 +4,10 @@ set -Eeuo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
 containers=()
+network=
 cleanup() {
   for container in "${containers[@]}"; do docker rm -f "$container" >/dev/null 2>&1 || true; done
+  [[ -z "$network" ]] || docker network rm "$network" >/dev/null 2>&1 || true
   rm -rf -- "$work"
 }
 trap cleanup EXIT
@@ -50,3 +52,50 @@ docker run --rm --entrypoint nginx \
   -v "$work/tls:/etc/letsencrypt:ro" \
   sheria-connect-website:deployment-check -t
 echo "Compose, shell syntax, frontend runtime identity and host Nginx checks passed."
+
+# Boot the real production image against a fresh disposable database, no .env.
+network="sheria-smoke-network-$$"
+docker network create "$network" >/dev/null
+db="sheria-smoke-db-$$"
+docker run -d --name "$db" --network "$network" \
+  --tmpfs /var/lib/postgresql/data:rw,size=256m \
+  -e POSTGRES_DB=sheria_connect_smoke -e POSTGRES_USER=sheria_ci \
+  -e POSTGRES_PASSWORD=ci-only-not-production postgres:16-alpine >/dev/null
+containers+=("$db")
+for attempt in {1..30}; do
+  if docker exec "$db" pg_isready -U sheria_ci -d sheria_connect_smoke >/dev/null 2>&1; then break; fi
+  sleep 1
+done
+api="sheria-smoke-api-$$"
+docker run -d --name "$api" --network "$network" -p 127.0.0.1::6001 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  -e DB_HOST="$db" -e DB_NAME=sheria_connect_smoke -e DB_USERNAME=sheria_ci \
+  -e DB_PASSWORD=ci-only-not-production \
+  -e JWT_SECRET=ci-only-signing-secret-at-least-sixty-four-characters-long-not-production \
+  -e MFA_ENCRYPTION_KEY=ci-only-mfa-not-production \
+  -e TRACKING_TOKEN_DERIVATION_KEY=ci-only-tracking-not-production \
+  sheria-connect-api:deployment-check >/dev/null
+containers+=("$api")
+port=$(docker port "$api" 6001/tcp | cut -d: -f2)
+ready=false
+for attempt in {1..60}; do
+  if curl -fsS --connect-timeout 2 --max-time 5 "http://127.0.0.1:$port/health" > "$work/api.json" 2>/dev/null; then ready=true; break; fi
+  sleep 2
+done
+if [[ "$ready" != true ]]; then docker logs --tail=80 "$api"; exit 1; fi
+python3 - "$work/api.json" <<'PY'
+import json, sys
+data = json.load(open(sys.argv[1]))
+assert data["status"] == "UP"
+assert data["service"] == "sheria-connect-api"
+assert data["revision"] == "a" * 40
+PY
+for host in app admin; do
+  origin="https://$host.sheriaconnect.co.tz"
+  curl -fsS -D "$work/cors.headers" -o /dev/null --max-time 5 \
+    -X OPTIONS "http://127.0.0.1:$port/auth/mfa/verify" \
+    -H "Origin: $origin" -H 'Access-Control-Request-Method: POST' \
+    -H 'Access-Control-Request-Headers: content-type,x-client-type,x-active-context'
+  grep -Fq "Access-Control-Allow-Origin: $origin" "$work/cors.headers"
+done
+echo "Fresh production API startup, migrations, readiness and app/admin CORS checks passed."

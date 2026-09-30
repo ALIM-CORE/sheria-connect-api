@@ -28,6 +28,10 @@ RUN mvn clean package -DskipTests
 # Start a fresh image with just the JRE — none of the Maven build tools
 # from Stage 1 are included here, keeping the final image smaller.
 FROM eclipse-temurin:21-jre
+ARG BUILD_SHA=local
+ENV BUILD_SHA=$BUILD_SHA
+LABEL org.opencontainers.image.revision=$BUILD_SHA
+LABEL org.opencontainers.image.source="https://github.com/ALIM-CORE/sheria-connect-api"
  
 # Set the working directory for the running application.
 WORKDIR /app
@@ -35,7 +39,7 @@ WORKDIR /app
 # Copy only the built .jar file from the "builder" stage above into this image.
 COPY --from=builder /build/target/*.jar app.jar
  
-# Tell Docker the app listens on port 6002 inside the container.
+# The API listens on port 6001 inside the container.
 EXPOSE 6001
  
 # The command that runs when the container starts: launches the Spring Boot app.

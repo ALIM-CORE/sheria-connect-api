@@ -1,10 +1,14 @@
 package co.tz.sheriaconnectapi.services.AuthServices;
 
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.Locale;
 
 @Service
 public class RefreshTokenCookieService {
@@ -23,8 +27,36 @@ public class RefreshTokenCookieService {
         this.path = path;
     }
 
-    public String create(String token, Duration maxAge) {
-        return ResponseCookie.from("refresh_token", token)
+    public String create(AccessContext context, String token, Duration maxAge) {
+        return cookie(name(context), token, maxAge);
+    }
+
+    public String name(AccessContext context) {
+        return "refresh_token_" + context.name().toLowerCase(Locale.ROOT);
+    }
+
+    public String read(HttpServletRequest request, AccessContext context) {
+        return readCookie(request, name(context));
+    }
+
+    public String readLegacy(HttpServletRequest request) {
+        return readCookie(request, "refresh_token");
+    }
+
+    private String readCookie(HttpServletRequest request, String name) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (name.equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
+    }
+
+    private String cookie(String name, String token, Duration maxAge) {
+        return ResponseCookie.from(name, token)
                 .httpOnly(true)
                 .secure(secure)
                 .sameSite(sameSite)
@@ -34,7 +66,11 @@ public class RefreshTokenCookieService {
                 .toString();
     }
 
-    public String clear() {
-        return create("", Duration.ZERO);
+    public String clear(AccessContext context) {
+        return create(context, "", Duration.ZERO);
+    }
+
+    public String clearLegacy() {
+        return cookie("refresh_token", "", Duration.ZERO);
     }
 }

@@ -13,12 +13,13 @@ import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.repositories.AuthSessionRepository;
 import co.tz.sheriaconnectapi.repositories.RefreshTokenRepository;
 import co.tz.sheriaconnectapi.security.Access.EffectiveAccess;
+import co.tz.sheriaconnectapi.security.Access.AccessContextResolver;
+import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.security.Access.ScopedAuthorityService;
 import co.tz.sheriaconnectapi.security.Jwt.ClientType;
 import co.tz.sheriaconnectapi.security.Jwt.JwtUtil;
 import co.tz.sheriaconnectapi.utils.ResponseUtil;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -28,10 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @Service
 public class RefreshService implements Command<RefreshInput, Map<String, Object>> {
@@ -41,29 +40,31 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
     private final AuthSessionRepository authSessionRepository;
     private final RefreshTokenCookieService refreshTokenCookieService;
     private final ScopedAuthorityService authorityService;
+    private final AccessContextResolver accessContextResolver;
 
     public RefreshService(
             RefreshTokenRepository refreshTokenRepository,
             AuthSessionRepository authSessionRepository,
             RefreshTokenCookieService refreshTokenCookieService,
-            ScopedAuthorityService authorityService
+            ScopedAuthorityService authorityService,
+            AccessContextResolver accessContextResolver
     ) {
         this.refreshTokenRepository = refreshTokenRepository;
         this.authSessionRepository = authSessionRepository;
         this.refreshTokenCookieService = refreshTokenCookieService;
         this.authorityService = authorityService;
+        this.accessContextResolver = accessContextResolver;
     }
 
     private String extractRefreshToken(HttpServletRequest request, RefreshTokenRequest body) {
-        String cookieToken = Arrays.stream(
-                        Optional.ofNullable(request.getCookies()).orElse(new Cookie[0])
-                )
-                .filter(cookie -> cookie.getName().equals("refresh_token"))
-                .map(Cookie::getValue)
-                .findFirst()
-                .orElse(null);
-        if (cookieToken != null) {
-            return cookieToken;
+        if (accessContextResolver.clientType(request) == ClientType.WEB) {
+            AccessContext context = accessContextResolver.context(request, ClientType.WEB, null);
+            String cookieToken = refreshTokenCookieService.read(request, context);
+            if (cookieToken != null) {
+                return cookieToken;
+            }
+            // One-release migration: the stored session must match before rotation.
+            return refreshTokenCookieService.readLegacy(request);
         }
         return body == null ? null : body.getRefreshToken();
     }
@@ -78,6 +79,7 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
 
         RefreshToken storedToken = refreshTokenRepository.findByToken(tokenValue)
                 .orElseThrow(() -> new InvalidTokenException(ErrorMessages.INVALID_TOKEN));
+        validateRequestSession(input.getRequest(), storedToken.getAuthSession());
         Instant now = Instant.now();
         if (storedToken.isRevoked()) {
             return reuseRecentlyRotatedToken(input, storedToken, now);
@@ -116,6 +118,7 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
         }
 
         RefreshContext context = validateUsableToken(replacement, now);
+        validateRequestSession(input.getRequest(), context.session());
         context.session().setLastActivityAt(now);
         authSessionRepository.save(context.session());
         return refreshedResponse(input, context, replacement.getToken());
@@ -176,6 +179,12 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
         refreshTokenRepository.save(token);
     }
 
+    private void validateRequestSession(HttpServletRequest request, AuthSession session) {
+        if (!accessContextResolver.matchesSession(request, session)) {
+            throw new InvalidTokenException(ErrorMessages.INVALID_TOKEN);
+        }
+    }
+
     private ResponseEntity<StandardResponse<Map<String, Object>>> refreshedResponse(
             RefreshInput input,
             RefreshContext context,
@@ -185,8 +194,13 @@ public class RefreshService implements Command<RefreshInput, Map<String, Object>
         if (context.session().getClientType() == ClientType.WEB) {
             input.getResponse().addHeader(
                     HttpHeaders.SET_COOKIE,
-                    refreshTokenCookieService.create(refreshToken, Duration.ofDays(7))
+                    refreshTokenCookieService.create(
+                            context.session().getActiveContext(), refreshToken, Duration.ofDays(7))
             );
+            if (refreshTokenCookieService.read(input.getRequest(), context.session().getActiveContext()) == null
+                    && refreshTokenCookieService.readLegacy(input.getRequest()) != null) {
+                input.getResponse().addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookieService.clearLegacy());
+            }
         }
 
         Map<String, Object> body = new HashMap<>();

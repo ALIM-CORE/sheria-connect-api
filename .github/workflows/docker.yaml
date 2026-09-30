@@ -1,99 +1,129 @@
-name: Build, Push and Deploy Sheria-Connect Backend
+name: Sheria Connect API CI and production
 
 on:
   push:
-    branches:
-      - staging
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy this tested main revision (production must be enabled)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  build-and-deploy:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: sheria_connect_ci
+          POSTGRES_USER: sheria_ci
+          POSTGRES_PASSWORD: ci-only-not-a-production-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sheria_ci -d sheria_connect_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      SPRING_PROFILES_ACTIVE: ci
+      TEST_DATABASE_URL: jdbc:postgresql://localhost:5432/sheria_connect_ci
+      TEST_DATABASE_USERNAME: sheria_ci
+      TEST_DATABASE_PASSWORD: ci-only-not-a-production-password
+      JWT_SECRET: ci-only-signing-secret-at-least-sixty-four-characters-long-not-production
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - run: mvn --batch-mode --no-transfer-progress verify
+      - name: Deployment helper regression tests
+        run: python3 -m unittest discover -s deploy/tests -v
+
+  publish:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: verify
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-    env:
-      IMAGE_REPOSITORY: ghcr.io/alim-core/sheria-connect-backend
-
+    outputs:
+      image: ${{ steps.image.outputs.image }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set image URI
-        run: echo "IMAGE_URI=${IMAGE_REPOSITORY}:${GITHUB_SHA::7}" >> "$GITHUB_ENV"
-
-      - name: Login to GHCR
-        run: echo "${{ secrets.NEW_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Build Docker image
-        run: docker build -t "$IMAGE_URI" .
-
-      - name: Push Docker image
-        run: docker push "$IMAGE_URI"
-
-      - name: Deploy on server
-        uses: appleboy/ssh-action@v1.0.0
+      - uses: actions/checkout@v7
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          envs: IMAGE_URI
-          script: |
-            set -eu
-            echo "${{ secrets.NEW_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            cd ${{ secrets.SERVER_PATH }}
-            sed -i "/^[[:space:]]*backend:/,/^[[:space:]]*[A-Za-z0-9_-]\+:/ s|^\([[:space:]]*image:[[:space:]]*\).*|\1${IMAGE_URI}|" docker-compose.yaml
-
-            if ! sed -n "/^[[:space:]]*backend:/,/^[[:space:]]*[A-Za-z0-9_-]\+:/p" docker-compose.yaml | grep -Fq "$IMAGE_URI"; then
-              echo "Backend image was not updated in docker-compose.yaml"
-              sed -n "/^[[:space:]]*backend:/,/^[[:space:]]*[A-Za-z0-9_-]\+:/p" docker-compose.yaml
-              exit 1
-            fi
-
-            docker compose pull backend
-            docker compose up -d backend
-
-            echo "Waiting for backend health on the VPS..."
-            for attempt in $(seq 1 36); do
-              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://127.0.0.1:6001/health || true)
-              echo "  Attempt ${attempt}/36: HTTP ${STATUS}"
-              if [ "$STATUS" = "200" ]; then
-                echo "Backend is healthy on localhost"
-                exit 0
-              fi
-
-              if ! docker ps --format '{{.Names}}' | grep -qx 'sheria-connect-backend'; then
-                echo "Backend container is not running"
-                docker compose ps backend
-                docker compose logs --tail=120 backend
-                exit 1
-              fi
-
-              sleep 5
-            done
-
-            echo "Backend did not become healthy in time"
-            docker compose ps
-            docker compose logs --tail=160 backend
-            exit 1
-
-      - name: Public health checks
+          persist-credentials: false
+      - name: Publish tested revision
+        id: image
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ghcr.io/alim-core/sheria-connect-backend
         run: |
-          check_url() {
-            local URL="$1"
-            for attempt in {1..12}; do
-              echo "Checking $URL, attempt $attempt/12 ..."
-              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$URL" || true)
-              echo "  HTTP $STATUS"
-              if [ "$STATUS" = "200" ]; then
-                echo "  OK"
-                return 0
-              fi
-              sleep 5
-            done
-            echo "  $URL is not healthy"
-            return 1
-          }
+          set -euo pipefail
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          TAG="$IMAGE:$GITHUB_SHA"
+          # A rerun reuses the published revision; it never overwrites it.
+          if docker manifest inspect "$TAG" >/dev/null 2>&1; then
+            docker pull "$TAG"
+          else
+            docker build --pull --build-arg BUILD_SHA="$GITHUB_SHA" -t "$TAG" .
+            docker push "$TAG"
+          fi
+          REF=$(docker inspect --format '{{index .RepoDigests 0}}' "$TAG")
+          test -n "$REF"
+          echo "image=$REF" >> "$GITHUB_OUTPUT"
+          echo "Published $REF" >> "$GITHUB_STEP_SUMMARY"
 
-          check_url "https://api.sheriaconnect.co.tz/health"
-          check_url "https://sheriaconnect.co.tz/health"
+  deploy:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      vars.PRODUCTION_DEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'push' || inputs.deploy)
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    permissions:
+      contents: read
+    concurrency:
+      group: production-backend
+      cancel-in-progress: false
+    steps:
+      - name: Deploy pinned image through VPS deployment helper
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER: ${{ secrets.SERVER_USER }}
+          SERVER_PATH: ${{ vars.SERVER_PATH }}
+          IMAGE_REF: ${{ needs.publish.outputs.image }}
+        run: |
+          set -euo pipefail
+          [[ "$HOST" =~ ^[a-zA-Z0-9.-]+$ ]]
+          [[ "$USER" =~ ^[a-zA-Z0-9_-]+$ ]]
+          [[ "$SERVER_PATH" =~ ^/[a-zA-Z0-9/_-]+$ ]]
+          [[ "$IMAGE_REF" =~ ^ghcr.io/alim-core/sheria-connect-backend@sha256:[a-f0-9]{64}$ ]]
+          test -n "$SSH_KEY"
+          test -n "$KNOWN_HOSTS"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            "$USER@$HOST" \
+            "bash '$SERVER_PATH/ops/deploy.sh' 'backend' '$IMAGE_REF' '$GITHUB_SHA'"

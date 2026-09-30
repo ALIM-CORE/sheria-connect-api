@@ -189,6 +189,7 @@ public class StaffMfaService {
                 .header(
                         HttpHeaders.SET_COOKIE,
                         refreshTokenCookieService.create(
+                                AccessContext.STAFF,
                                 issued.refreshToken(),
                                 WEB_REFRESH_DURATION
                         )

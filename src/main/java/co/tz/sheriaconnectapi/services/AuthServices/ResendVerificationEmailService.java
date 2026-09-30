@@ -31,7 +31,7 @@ public class ResendVerificationEmailService
     @Value("${app.frontend.base-url}")
     private String backendBaseUrl;
 
-    @Value("${app.frontend.base-domain}")
+    @Value("${app.frontend.auth-base-url}")
     private String frontendBaseDomain;
 
     public ResendVerificationEmailService(

@@ -104,19 +104,32 @@ class WebContextSessionsIntegrationTest {
         assertEquals(200, logout.getResponse().getStatus());
         assertEquals(1, logout.getResponse().getHeaders("Set-Cookie").size());
         assertTrue(logout.getResponse().getHeader("Set-Cookie").startsWith("refresh_token_citizen=;"));
-        assertEquals(200, refresh("STAFF", staffCookie).getResponse().getStatus());
+        var remainingStaff = refresh("STAFF", staffCookie);
+        assertEquals(200, remainingStaff.getResponse().getStatus());
+        staffCookie = cookie(remainingStaff, "refresh_token_staff");
         assertNotEquals(200, refresh("CITIZEN", citizenCookie).getResponse().getStatus());
+
+        citizenCookie = cookie(login("WEB", "CITIZEN"), "refresh_token_citizen");
+        var staffLogout = mvc.perform(post("/auth/logout")
+                .header("X-Client-Type", "WEB").header("X-Active-Context", "STAFF")
+                .cookie(staffCookie, citizenCookie)).andReturn();
+        assertEquals(200, staffLogout.getResponse().getStatus());
+        assertEquals(1, staffLogout.getResponse().getHeaders("Set-Cookie").size());
+        assertTrue(staffLogout.getResponse().getHeader("Set-Cookie").startsWith("refresh_token_staff=;"));
+        assertEquals(200, refresh("CITIZEN", citizenCookie).getResponse().getStatus());
+        assertNotEquals(200, refresh("STAFF", staffCookie).getResponse().getStatus());
+        assertEquals("MFA_REQUIRED", body(login("WEB", "STAFF")).get("state").asText());
     }
 
     @Test
-    void staffCookieCannotBeRelabelledToObtainACitizenToken() throws Exception {
+    void citizenCookieCannotBeRelabelledToObtainAStaffToken() throws Exception {
         // Exercise wrong-context rejection with a real DB session/token.
         var citizenLogin = login("WEB", "CITIZEN");
         var citizenCookie = cookie(citizenLogin, "refresh_token_citizen");
         var relabelled = new Cookie("refresh_token_staff", citizenCookie.getValue());
         var rejected = refresh("STAFF", relabelled);
-        assertEquals(400, rejected.getResponse().getStatus());
-        assertEquals("INVALID_TOKEN", json.readTree(rejected.getResponse().getContentAsString()).get("errorCode").asText());
+        assertEquals(401, rejected.getResponse().getStatus());
+        assertEquals("INVALID_TOKEN", json.readTree(rejected.getResponse().getContentAsString()).get("code").asText());
         assertEquals(200, refresh("CITIZEN", citizenCookie).getResponse().getStatus());
     }
 

@@ -41,7 +41,7 @@ public class StaffInvitationService {
     private final AccessAuditService auditService;
     private final EmailService emailService;
 
-    @Value("${app.frontend.base-domain}")
+    @Value("${app.frontend.admin-base-url}")
     private String frontendBaseDomain;
 
     public StaffInvitationService(

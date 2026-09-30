@@ -1,5 +1,4 @@
 """Exercise the deployment helper without connecting to Docker, GHCR or the VPS."""
-import json
 import os
 import pathlib
 import shutil
@@ -34,7 +33,8 @@ case "$name" in
         if [[ "${MOCK_FAILURE:-}" == label ]]; then echo wrong; else echo "$MOCK_SHA"; fi ;;
       *'.Config.Image'*) echo "ghcr.io/alim-core/$MOCK_REPOSITORY:previous" ;;
       *'{{.Id}}'*|*'{{.Image}}'*) echo image-id ;;
-      *'ps -a -q'*|*'ps -q'*) [[ "${MOCK_BOOTSTRAP:-}" != true ]] && echo container-id || true ;;
+      *'ps -a -q'*) [[ "${MOCK_BOOTSTRAP:-}" != true ]] && echo container-id || true ;;
+      *'ps -q'*) echo container-id ;;
       *'pg_dump'*) [[ "${MOCK_FAILURE:-}" != backup ]] && printf database-dump ;;
       *'pg_restore'*) cat >/dev/null ;;
       *'up -d'*) [[ "${MOCK_FAILURE:-}" != up ]] ;;

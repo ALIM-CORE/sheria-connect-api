@@ -82,7 +82,8 @@ For EACH of the four repositories:
 - Ensure each repository's Actions `GITHUB_TOKEN` can write its own GHCR package. For the existing backend/frontend packages, grant the repository Actions access in package settings if necessary. `NEW_PAT` is no longer used by CI.
 - On the VPS, log in to GHCR once as the deployment user with a read-packages credential. Do not use a publishing PAT on the VPS.
 
-Review and commit each repository's work before publishing it. The Citizen app and website currently need their first commits; do not accidentally omit their lockfiles, public env files or assets.
+Review and commit each repository's work before publishing it. Do not accidentally omit lockfiles, public env files or assets from the new web repositories.
+Freeze pushes to the old `master`/`staging` branches during cutover: their historical workflow still deploys from `staging` until it is retired on GitHub.
 
 For an existing repo, after review/commit on `dev`:
 
@@ -181,6 +182,14 @@ Do not use the old `docker-compose.yaml` for routine updates after cutover. Keep
 
 ## Routine release and recovery
 
+Web refresh sessions now use separate host-only HttpOnly cookies: `refresh_token_staff` for the portal and `refresh_token_citizen` for the Citizen web app. Login, refresh and logout identify their context using `X-Client-Type: WEB` and `X-Active-Context: STAFF` or `CITIZEN`. Refresh validates both against the stored session before rotation, including during the reuse grace window. Staff still requires TOTP; Citizen web login does not bypass Staff authentication. Provider participation remains mobile-only.
+
+Deploy the backend before the updated portal and Citizen web bundles. Existing `refresh_token` cookies migrate only on a successful refresh for their original context, then expire; an unrelated context cannot consume or clear them. Users whose old shared cookie was already overwritten must sign in again. No database migration, key rotation or APK update is required for this cookie repair. Mobile login/refresh continues using body tokens, not web cookies.
+
+Verify the repair in one browser profile: sign into Citizen web and Staff portal, let access tokens expire, and navigate in both. Check that each refresh returns its own active context. Sign out of Citizen web and confirm Staff stays signed in; repeat in the opposite direction. In browser storage, both cookies should be HttpOnly, Secure in production, and scoped to the API host without a parent-domain attribute.
+
+The Citizen web repository currently contains an authentication shell, not the complete reporting experience. Deploying its container does not mean the Citizen web MVP is feature-complete.
+
 Work on local `dev`, run checks, commit, then fast-forward `main` to the tested revision and push `main`. CI never deploys development. Avoid unrelated cross-repository releases in one go; backend additive changes first, clients second.
 
 No VPS source pulls/builds, no global `docker compose pull/up`, and no `docker image prune` in deployment. Keep at least the previous images and protected DB/evidence backups.
@@ -188,3 +197,11 @@ No VPS source pulls/builds, no global `docker compose pull/up`, and no `docker i
 On a failed backend release, inspect `docker compose ... logs backend`, Flyway results and the saved database dump before choosing a compatible code rollback or restoring the DB during maintenance. A code rollback cannot undo a schema migration. Restoring DB alone may also make evidence metadata/files inconsistent, so coordinate their snapshots.
 
 Updates to this shared helper/Compose/Nginx bundle are deliberate operational changes: review and install them on the server separately. Frontend pipelines never overwrite the shared server configuration.
+
+## Local verification
+
+Run `mvn verify` on JDK 21 against a dedicated PostgreSQL database with `SPRING_PROFILES_ACTIVE=ci` and the `TEST_DATABASE_*` variables, never against production. Set a CI-only `JWT_SECRET` in the process environment.
+
+Run `npm run lint`, `npm test`, `npm run build:vps` in each web repository.
+Validate workflow YAML with Actionlint and run `python3 -m unittest discover -s deploy/tests -v` on Linux/WSL.
+For the optional local Docker smoke check, build the four Dockerfiles with `--build-arg BUILD_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`, tagging `sheria-connect-api:deployment-check`, `sheria-connect-admin:deployment-check`, `sheria-connect-app:deployment-check` and `sheria-connect-website:deployment-check`. Run `bash deploy/tests/verify-local.sh` in Linux/WSL. It uses disposable containers/certificates, validates Compose/Nginx, starts production API against a fresh PostgreSQL database, checks host CORS, and cleans up its containers/network. It never touches the VPS or existing database.

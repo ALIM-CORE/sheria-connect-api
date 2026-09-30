@@ -63,16 +63,17 @@ try:
         assert data["revision"] == sys.argv[3]
     else:
         assert data["status"] == "UP"
-except (ValueError, KeyError, AssertionError):
+except (ValueError, KeyError, AssertionError, OSError):
     sys.exit(1)
 PY
 }
 
 wait_ready() {
+  local revision_endpoint=release.json
+  [[ "$service" != backend ]] || revision_endpoint=health
   for attempt in {1..40}; do
     if verify_response "http://127.0.0.1:$port/health" "" &&
-       { [[ "$service" == backend ]] && verify_response "http://127.0.0.1:$port/health" "$revision" ||
-         [[ "$service" != backend ]] && verify_response "http://127.0.0.1:$port/release.json" "$revision"; }; then
+       verify_response "http://127.0.0.1:$port/$revision_endpoint" "$revision"; then
       return 0
     fi
     echo "Waiting for $service ($attempt/40)"
@@ -106,20 +107,32 @@ fi
 
 update_release "$image"
 successful=false
-if "${compose[@]}" up -d --no-deps --no-build --force-recreate --pull never "$service" && wait_ready; then
-  running_id=$("${compose[@]}" ps -q "$service")
-  expected_id=$(docker inspect --format '{{.Id}}' "$image")
-  running_image=$(docker inspect --format '{{.Image}}' "$running_id")
-  if [[ "$running_image" == "$expected_id" ]]; then
+running_image_matches() {
+  local running_id expected_id running_image
+  running_id=$("${compose[@]}" ps -q "$service") || return 1
+  [[ -n "$running_id" ]] || return 1
+  expected_id=$(docker inspect --format '{{.Id}}' "$image") || return 1
+  running_image=$(docker inspect --format '{{.Image}}' "$running_id") || return 1
+  [[ "$running_image" == "$expected_id" ]]
+}
+if "${compose[@]}" up -d --no-deps --no-build --force-recreate --pull never "$service" &&
+   wait_ready && running_image_matches; then
     if [[ "$bootstrap" == --bootstrap ]]; then
       successful=true
       echo "Bootstrap ready locally; validate DNS/TLS and public routing before enabling CI deploys."
-    elif verify_response "$public/health" "" &&
-         { [[ "$service" == backend ]] && verify_response "$public/health" "$revision" ||
-           [[ "$service" != backend ]] && verify_response "$public/release.json" "$revision"; }; then
-      successful=true
+    else
+      revision_endpoint=release.json
+      [[ "$service" != backend ]] || revision_endpoint=health
+      # The proxy can take a few seconds to settle after container recreation.
+      for attempt in {1..6}; do
+        if verify_response "$public/health" "" &&
+           verify_response "$public/$revision_endpoint" "$revision"; then
+          successful=true
+          break
+        fi
+        sleep 3
+      done
     fi
-  fi
 fi
 
 if [[ "$successful" != true ]]; then
@@ -129,8 +142,11 @@ if [[ "$successful" != true ]]; then
     echo "Preserve the backup and inspect migration/application logs before recovery." >&2
   elif [[ -n "$previous_image" ]]; then
     update_release "$previous_image"
-    "${compose[@]}" up -d --no-deps --no-build --force-recreate --pull never "$service" || true
-    echo "Restored previous frontend image; the deployment is still marked failed." >&2
+    if "${compose[@]}" up -d --no-deps --no-build --force-recreate --pull never "$service"; then
+      echo "Recreated the previous frontend image; verify its availability. Deployment is still failed." >&2
+    else
+      echo "Frontend rollback also failed; manual recovery is required." >&2
+    fi
   fi
   fail "$service did not pass revision, readiness and routing checks"
 fi

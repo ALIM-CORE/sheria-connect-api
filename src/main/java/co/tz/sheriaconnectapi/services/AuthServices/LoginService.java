@@ -38,6 +38,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
+import java.time.Duration;
 
 @Service
 public class LoginService implements Command<LoginInput, LoginResponse> {
@@ -126,7 +127,7 @@ public class LoginService implements Command<LoginInput, LoginResponse> {
         userEntity.setLastLoginAt(Instant.now());
         userRepository.save(userEntity);
 
-        if (clientType == ClientType.WEB) {
+        if (context == AccessContext.STAFF) {
             String invitationToken = loginInput.getUserLoginDTO().getInvitationToken();
             if (invitationToken != null && !invitationToken.isBlank()) {
                 var invitation = invitationRepository
@@ -185,6 +186,14 @@ public class LoginService implements Command<LoginInput, LoginResponse> {
                 false,
                 loginInput.getRequest()
         );
+        if (clientType == ClientType.WEB) {
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, refreshTokenCookieService.create(
+                            context, issued.refreshToken(),
+                            Duration.ofSeconds(WEB_REFRESH_COOKIE_MAX_AGE_SECONDS)))
+                    .body(new StandardResponse<>(true, "Login successful",
+                            new LoginResponse(issued.accessToken(), issued.user()), null));
+        }
         MobileLoginResponse mobileBody = new MobileLoginResponse(
                 issued.accessToken(),
                 issued.user(),

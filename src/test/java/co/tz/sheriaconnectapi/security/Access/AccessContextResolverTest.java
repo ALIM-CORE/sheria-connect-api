@@ -25,6 +25,7 @@ class AccessContextResolverTest {
         var request = new MockHttpServletRequest();
         request.addHeader("X-Active-Context", "PROVIDER");
         assertThrows(InvalidClientTypeException.class, () -> resolver.context(request, ClientType.WEB, null));
+        request.removeHeader("X-Active-Context");
         request.addHeader("X-Active-Context", "STAFF");
         assertThrows(InvalidClientTypeException.class, () -> resolver.context(request, ClientType.MOBILE, null));
     }
@@ -38,16 +39,20 @@ class AccessContextResolverTest {
         request.addHeader("X-Client-Type", "WEB");
         request.addHeader("X-Active-Context", "CITIZEN");
         assertFalse(resolver.matchesSession(request, session));
+        request.removeHeader("X-Client-Type");
+        request.removeHeader("X-Active-Context");
         request.addHeader("X-Client-Type", "MOBILE");
         request.addHeader("X-Active-Context", "PROVIDER");
         assertFalse(resolver.matchesSession(request, session));
+        request.removeHeader("X-Client-Type");
+        request.removeHeader("X-Active-Context");
         request.addHeader("X-Client-Type", "WEB");
         request.addHeader("X-Active-Context", "STAFF");
         assertTrue(resolver.matchesSession(request, session));
     }
 
     @Test
-    void_mobile_refresh_without_context_uses_the_existing_product_session() {
+    void mobileRefreshWithoutContextUsesTheExistingProductSession() {
         var session = new AuthSession();
         session.setClientType(ClientType.MOBILE);
         session.setActiveContext(AccessContext.PROVIDER);

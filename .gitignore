@@ -43,3 +43,10 @@ target/
 *.iml
 .idea/
 .mvn/
+!deploy/**/*.md
+deploy/.env
+deploy/.releases.env
+deploy/backups/
+deploy/deployments.log
+deploy/.deploy-work.*
+**/__pycache__/

@@ -25,7 +25,7 @@ public class RequestPasswordResetService
     private final PasswordResetTokenRepository tokenRepository;
     private final EmailService emailService;
 
-    @Value("${app.frontend.base-domain}")
+    @Value("${app.frontend.auth-base-url}")
     private String frontendBaseUrl;
 
     public RequestPasswordResetService(

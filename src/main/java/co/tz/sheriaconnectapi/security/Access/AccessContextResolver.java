@@ -2,6 +2,7 @@ package co.tz.sheriaconnectapi.security.Access;
 
 import co.tz.sheriaconnectapi.exceptions.InvalidClientTypeException;
 import co.tz.sheriaconnectapi.model.Entities.User;
+import co.tz.sheriaconnectapi.model.Entities.AuthSession;
 import co.tz.sheriaconnectapi.model.Enums.AccessContext;
 import co.tz.sheriaconnectapi.model.Enums.UserAccountType;
 import co.tz.sheriaconnectapi.security.Jwt.ClientType;
@@ -45,7 +46,7 @@ public class AccessContextResolver {
     }
 
     private void validateClientContext(ClientType clientType, AccessContext context) {
-        if (clientType == ClientType.WEB && context != AccessContext.STAFF) {
+        if (clientType == ClientType.WEB && context == AccessContext.PROVIDER) {
             throw new InvalidClientTypeException();
         }
         if (clientType == ClientType.MOBILE && context == AccessContext.STAFF) {
@@ -59,5 +60,19 @@ public class AccessContextResolver {
             case PROVIDER -> "provider-app";
             case STAFF -> "admin-portal";
         };
+    }
+
+    public boolean matchesSession(HttpServletRequest request, AuthSession session) {
+        if (session == null) {
+            return false;
+        }
+        ClientType clientType = clientType(request);
+        String contextHeader = request.getHeader("X-Active-Context");
+        AccessContext requestedContext = (contextHeader == null || contextHeader.isBlank())
+                && clientType == ClientType.MOBILE
+                ? session.getActiveContext()
+                : context(request, clientType, session.getUser());
+        validateClientContext(clientType, requestedContext);
+        return clientType == session.getClientType() && requestedContext == session.getActiveContext();
     }
 }
