@@ -1,0 +1,87 @@
+name: ${COMPOSE_PROJECT_NAME:?Set the existing VPS Compose project name}
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sheria-connect-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:?}
+      POSTGRES_USER: ${DB_USERNAME:?}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [app-network]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ${BACKEND_IMAGE:?}
+    container_name: sheria-connect-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      EVIDENCE_STORAGE_ROOT: /app/uploads/evidence
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [app-network]
+    ports: ["127.0.0.1:6001:6001"]
+    volumes:
+      - type: bind
+        source: ${EVIDENCE_HOST_PATH:?Set the existing absolute evidence directory}
+        target: /app/uploads/evidence
+        bind:
+          create_host_path: false
+
+  # Keep the old portal service/container identity, but move it to port 4101.
+  frontend:
+    image: ${ADMIN_IMAGE:?}
+    container_name: sheria-connect-frontend
+    restart: unless-stopped
+    networks: [app-network]
+    ports: ["127.0.0.1:4101:80"]
+
+  citizen:
+    image: ${CITIZEN_IMAGE:?}
+    container_name: sheria-connect-app
+    restart: unless-stopped
+    networks: [app-network]
+    ports: ["127.0.0.1:4001:80"]
+
+  website:
+    image: ${WEBSITE_IMAGE:?}
+    container_name: sheria-connect-website
+    restart: unless-stopped
+    networks: [app-network]
+    ports: ["127.0.0.1:4201:80"]
+
+  cloudbeaver:
+    profiles: [tools]
+    image: ${CLOUDBEAVER_IMAGE:?Pin the existing CloudBeaver image}
+    container_name: sheria-connect-cloudbeaver
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports: ["127.0.0.1:8978:8978"]
+    networks: [app-network]
+    volumes:
+      - cloudbeaver-data:/opt/cloudbeaver/workspace
+
+volumes:
+  # Fail rather than silently create a new empty database after a directory move.
+  pgdata:
+    external: true
+    name: ${DB_VOLUME_NAME:?Inspect the existing database volume name}
+  cloudbeaver-data:
+    external: true
+    name: ${CLOUDBEAVER_VOLUME_NAME:?Inspect the existing CloudBeaver volume name}
+
+networks:
+  app-network:
+    driver: bridge
