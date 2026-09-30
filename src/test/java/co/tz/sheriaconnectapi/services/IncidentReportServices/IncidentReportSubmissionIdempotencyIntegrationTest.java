@@ -32,9 +32,9 @@ class IncidentReportSubmissionIdempotencyIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
     @Autowired
-    private ObjectMapper objectMapper;
-    @Autowired
     private IncidentReportRepository reportRepository;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final List<UUID> submissionIds = new ArrayList<>();
 

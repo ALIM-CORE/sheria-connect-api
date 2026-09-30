@@ -2,6 +2,8 @@ package co.tz.sheriaconnectapi.services.IncidentReportServices;
 
 import co.tz.sheriaconnectapi.abstractions.Command;
 import co.tz.sheriaconnectapi.exceptions.UserNotValidException;
+import co.tz.sheriaconnectapi.exceptions.ReportSubmissionIdReusedException;
+import co.tz.sheriaconnectapi.exceptions.ReportSubmissionTokenUnavailableException;
 import co.tz.sheriaconnectapi.model.DTOs.CreateIncidentReportInput;
 import co.tz.sheriaconnectapi.model.DTOs.CreateIncidentReportRequest;
 import co.tz.sheriaconnectapi.model.DTOs.IncidentReportResponse;
@@ -18,7 +20,9 @@ import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -32,6 +36,8 @@ public class CreateIncidentReportService
     private final IncidentReportAccessService accessService;
     private final IncidentReportResponseFactory responseFactory;
     private final IncidentCategoryValidationService incidentCategoryValidationService;
+    private final IncidentReportSubmissionFingerprintService fingerprintService;
+    private final IncidentReportSubmissionLockService submissionLockService;
 
     public CreateIncidentReportService(
             IncidentReportRepository incidentReportRepository,
@@ -40,7 +46,9 @@ public class CreateIncidentReportService
             TrackingTokenService trackingTokenService,
             IncidentReportAccessService accessService,
             IncidentReportResponseFactory responseFactory,
-            IncidentCategoryValidationService incidentCategoryValidationService
+            IncidentCategoryValidationService incidentCategoryValidationService,
+            IncidentReportSubmissionFingerprintService fingerprintService,
+            IncidentReportSubmissionLockService submissionLockService
     ) {
         this.incidentReportRepository = incidentReportRepository;
         this.caseStatusHistoryRepository = caseStatusHistoryRepository;
@@ -49,9 +57,12 @@ public class CreateIncidentReportService
         this.accessService = accessService;
         this.responseFactory = responseFactory;
         this.incidentCategoryValidationService = incidentCategoryValidationService;
+        this.fingerprintService = fingerprintService;
+        this.submissionLockService = submissionLockService;
     }
 
     @Override
+    @Transactional
     public ResponseEntity<StandardResponse<IncidentReportResponse>> execute(
             CreateIncidentReportInput input
     ) {
@@ -59,13 +70,30 @@ public class CreateIncidentReportService
         validate(request);
 
         Optional<User> reporter = accessService.authenticatedCitizenUser(input.authentication());
+        String submissionFingerprint = fingerprintService.fingerprint(request);
+
+        if (request.getSubmissionId() != null) {
+            submissionLockService.lock(request.getSubmissionId());
+            Optional<IncidentReport> existing = incidentReportRepository
+                    .findBySubmissionId(request.getSubmissionId());
+            if (existing.isPresent()) {
+                return replay(existing.get(), reporter, submissionFingerprint);
+            }
+        }
+
         String trackingToken = reporter.isPresent()
                 ? null
-                : trackingTokenService.generateToken();
+                : request.getSubmissionId() == null
+                ? trackingTokenService.generateToken()
+                : trackingTokenService.deriveToken(request.getSubmissionId());
 
         IncidentReport report = new IncidentReport();
         report.setCaseNumber(caseNumberGeneratorService.generate());
         report.setReporterUser(reporter.orElse(null));
+        report.setSubmissionId(request.getSubmissionId());
+        report.setSubmissionFingerprint(
+                request.getSubmissionId() == null ? null : submissionFingerprint
+        );
         report.setTrackingTokenHash(trackingToken == null
                 ? null
                 : trackingTokenService.hash(trackingToken));
@@ -106,6 +134,39 @@ public class CreateIncidentReportService
                 "Incident report submitted successfully",
                 HttpStatus.CREATED
         );
+    }
+
+    private ResponseEntity<StandardResponse<IncidentReportResponse>> replay(
+            IncidentReport existing,
+            Optional<User> reporter,
+            String submissionFingerprint
+    ) {
+        if (!sameReporter(existing, reporter)
+                || !Objects.equals(existing.getSubmissionFingerprint(), submissionFingerprint)) {
+            throw new ReportSubmissionIdReusedException();
+        }
+
+        String trackingToken = null;
+        if (existing.getReporterUser() == null) {
+            trackingToken = trackingTokenService.deriveToken(existing.getSubmissionId());
+            if (!trackingTokenService.matches(trackingToken, existing.getTrackingTokenHash())) {
+                throw new ReportSubmissionTokenUnavailableException();
+            }
+        }
+
+        return ResponseUtil.success(
+                responseFactory.build(existing, trackingToken, false),
+                "Incident report already submitted",
+                HttpStatus.OK
+        );
+    }
+
+    private boolean sameReporter(IncidentReport existing, Optional<User> reporter) {
+        if (existing.getReporterUser() == null) {
+            return reporter.isEmpty();
+        }
+        return reporter.isPresent()
+                && Objects.equals(existing.getReporterUser().getId(), reporter.get().getId());
     }
 
     private void validate(CreateIncidentReportRequest request) {

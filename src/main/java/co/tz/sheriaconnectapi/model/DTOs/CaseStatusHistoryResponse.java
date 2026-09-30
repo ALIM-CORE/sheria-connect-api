@@ -15,11 +15,11 @@ public class CaseStatusHistoryResponse {
     private final String note;
     private final Instant createdAt;
 
-    public CaseStatusHistoryResponse(CaseStatusHistory history) {
+    public CaseStatusHistoryResponse(CaseStatusHistory history, boolean includeChangedByEmail) {
         this.id = history.getId();
         this.fromStatus = history.getFromStatus();
         this.toStatus = history.getToStatus();
-        this.changedByEmail = history.getChangedByUser() == null
+        this.changedByEmail = !includeChangedByEmail || history.getChangedByUser() == null
                 ? null
                 : history.getChangedByUser().getEmail();
         this.note = history.getNote();

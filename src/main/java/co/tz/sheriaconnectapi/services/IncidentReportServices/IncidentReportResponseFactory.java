@@ -5,9 +5,11 @@ import co.tz.sheriaconnectapi.model.Entities.AdminCaseNote;
 import co.tz.sheriaconnectapi.model.Entities.CaseStatusHistory;
 import co.tz.sheriaconnectapi.model.Entities.EvidenceFile;
 import co.tz.sheriaconnectapi.model.Entities.IncidentReport;
+import co.tz.sheriaconnectapi.model.Entities.IncidentReportReply;
 import co.tz.sheriaconnectapi.repositories.AdminCaseNoteRepository;
 import co.tz.sheriaconnectapi.repositories.CaseStatusHistoryRepository;
 import co.tz.sheriaconnectapi.repositories.EvidenceFileRepository;
+import co.tz.sheriaconnectapi.repositories.IncidentReportReplyRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,15 +20,18 @@ public class IncidentReportResponseFactory {
     private final EvidenceFileRepository evidenceFileRepository;
     private final CaseStatusHistoryRepository caseStatusHistoryRepository;
     private final AdminCaseNoteRepository adminCaseNoteRepository;
+    private final IncidentReportReplyRepository incidentReportReplyRepository;
 
     public IncidentReportResponseFactory(
             EvidenceFileRepository evidenceFileRepository,
             CaseStatusHistoryRepository caseStatusHistoryRepository,
-            AdminCaseNoteRepository adminCaseNoteRepository
+            AdminCaseNoteRepository adminCaseNoteRepository,
+            IncidentReportReplyRepository incidentReportReplyRepository
     ) {
         this.evidenceFileRepository = evidenceFileRepository;
         this.caseStatusHistoryRepository = caseStatusHistoryRepository;
         this.adminCaseNoteRepository = adminCaseNoteRepository;
+        this.incidentReportReplyRepository = incidentReportReplyRepository;
     }
 
     public IncidentReportResponse build(
@@ -41,13 +46,17 @@ public class IncidentReportResponseFactory {
         List<AdminCaseNote> adminNotes = includeAdminNotes
                 ? adminCaseNoteRepository.findByIncidentReportOrderByCreatedAtDesc(report)
                 : List.of();
+        List<IncidentReportReply> reporterReplies =
+                incidentReportReplyRepository.findByIncidentReportOrderByCreatedAtAsc(report);
 
         return new IncidentReportResponse(
                 report,
                 trackingToken,
                 evidenceFiles,
                 statusHistory,
-                adminNotes
+                reporterReplies,
+                adminNotes,
+                includeAdminNotes
         );
     }
 }

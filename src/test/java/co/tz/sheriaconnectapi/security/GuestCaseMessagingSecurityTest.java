@@ -33,4 +33,13 @@ class GuestCaseMessagingSecurityTest {
                         .content("{\"body\":\"Test message\"}"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void anonymousInformationReplyReachesCaseDomainAuthorization() throws Exception {
+        mockMvc.perform(post("/incident-reports/SC-2609-ABC234/replies")
+                        .header("X-Case-Tracking-Token", "tracking-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"body\":\"Additional information\"}"))
+                .andExpect(status().isNotFound());
+    }
 }

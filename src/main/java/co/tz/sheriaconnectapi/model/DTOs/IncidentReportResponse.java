@@ -4,6 +4,7 @@ import co.tz.sheriaconnectapi.model.Entities.AdminCaseNote;
 import co.tz.sheriaconnectapi.model.Entities.CaseStatusHistory;
 import co.tz.sheriaconnectapi.model.Entities.EvidenceFile;
 import co.tz.sheriaconnectapi.model.Entities.IncidentReport;
+import co.tz.sheriaconnectapi.model.Entities.IncidentReportReply;
 import co.tz.sheriaconnectapi.model.Enums.AnonymityMode;
 import co.tz.sheriaconnectapi.model.Enums.IncidentReportStatus;
 import co.tz.sheriaconnectapi.model.Enums.IncidentUrgency;
@@ -44,6 +45,7 @@ public class IncidentReportResponse {
     private final Instant updatedAt;
     private final List<EvidenceFileResponse> evidenceFiles;
     private final List<CaseStatusHistoryResponse> statusHistory;
+    private final List<IncidentReportReplyResponse> reporterReplies;
     private final List<AdminCaseNoteResponse> adminNotes;
 
     public IncidentReportResponse(
@@ -51,7 +53,9 @@ public class IncidentReportResponse {
             String trackingToken,
             List<EvidenceFile> evidenceFiles,
             List<CaseStatusHistory> statusHistory,
-            List<AdminCaseNote> adminNotes
+            List<IncidentReportReply> reporterReplies,
+            List<AdminCaseNote> adminNotes,
+            boolean includeStaffIdentity
     ) {
         this.id = report.getId();
         this.caseNumber = report.getCaseNumber();
@@ -87,7 +91,10 @@ public class IncidentReportResponse {
                 .toList();
         this.evidenceCount = this.evidenceFiles.size();
         this.statusHistory = statusHistory.stream()
-                .map(CaseStatusHistoryResponse::new)
+                .map(history -> new CaseStatusHistoryResponse(history, includeStaffIdentity))
+                .toList();
+        this.reporterReplies = reporterReplies.stream()
+                .map(IncidentReportReplyResponse::new)
                 .toList();
         this.adminNotes = adminNotes.stream()
                 .map(AdminCaseNoteResponse::new)

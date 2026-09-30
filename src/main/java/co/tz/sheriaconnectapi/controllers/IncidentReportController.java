@@ -5,6 +5,8 @@ import co.tz.sheriaconnectapi.model.DTOs.CreateIncidentReportInput;
 import co.tz.sheriaconnectapi.model.DTOs.CreateIncidentReportRequest;
 import co.tz.sheriaconnectapi.model.DTOs.EvidenceFileResponse;
 import co.tz.sheriaconnectapi.model.DTOs.IncidentReportLookupInput;
+import co.tz.sheriaconnectapi.model.DTOs.IncidentReportReplyInput;
+import co.tz.sheriaconnectapi.model.DTOs.IncidentReportReplyRequest;
 import co.tz.sheriaconnectapi.model.DTOs.IncidentReportResponse;
 import co.tz.sheriaconnectapi.model.DTOs.IncidentReportSummaryResponse;
 import co.tz.sheriaconnectapi.model.DTOs.UploadEvidenceInput;
@@ -13,6 +15,7 @@ import co.tz.sheriaconnectapi.services.IncidentReportServices.CreateIncidentRepo
 import co.tz.sheriaconnectapi.services.IncidentReportServices.DownloadEvidenceService;
 import co.tz.sheriaconnectapi.services.IncidentReportServices.GetIncidentReportService;
 import co.tz.sheriaconnectapi.services.IncidentReportServices.ListMyIncidentReportsService;
+import co.tz.sheriaconnectapi.services.IncidentReportServices.ReplyToIncidentReportService;
 import co.tz.sheriaconnectapi.services.IncidentReportServices.UploadEvidenceService;
 import co.tz.sheriaconnectapi.utils.StandardResponse;
 import org.springframework.core.io.Resource;
@@ -45,19 +48,22 @@ public class IncidentReportController {
     private final ListMyIncidentReportsService listMyIncidentReportsService;
     private final UploadEvidenceService uploadEvidenceService;
     private final DownloadEvidenceService downloadEvidenceService;
+    private final ReplyToIncidentReportService replyToIncidentReportService;
 
     public IncidentReportController(
             CreateIncidentReportService createIncidentReportService,
             GetIncidentReportService getIncidentReportService,
             ListMyIncidentReportsService listMyIncidentReportsService,
             UploadEvidenceService uploadEvidenceService,
-            DownloadEvidenceService downloadEvidenceService
+            DownloadEvidenceService downloadEvidenceService,
+            ReplyToIncidentReportService replyToIncidentReportService
     ) {
         this.createIncidentReportService = createIncidentReportService;
         this.getIncidentReportService = getIncidentReportService;
         this.listMyIncidentReportsService = listMyIncidentReportsService;
         this.uploadEvidenceService = uploadEvidenceService;
         this.downloadEvidenceService = downloadEvidenceService;
+        this.replyToIncidentReportService = replyToIncidentReportService;
     }
 
     @PostMapping
@@ -133,6 +139,24 @@ public class IncidentReportController {
                 evidenceId,
                 firstPresent(trackingTokenHeader, trackingToken),
                 authentication
+        );
+    }
+
+    @PostMapping("/{caseNumber}/replies")
+    public ResponseEntity<StandardResponse<IncidentReportResponse>> reply(
+            @PathVariable String caseNumber,
+            @RequestBody IncidentReportReplyRequest request,
+            @RequestHeader(name = "X-Case-Tracking-Token", required = false) String trackingToken,
+            Authentication authentication
+    ) {
+        validateCaseNumber(caseNumber);
+        return replyToIncidentReportService.execute(
+                new IncidentReportReplyInput(
+                        caseNumber,
+                        request,
+                        trackingToken,
+                        authentication
+                )
         );
     }
 

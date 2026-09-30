@@ -10,6 +10,7 @@ import co.tz.sheriaconnectapi.model.DTOs.IncidentReportResponse;
 import co.tz.sheriaconnectapi.model.Entities.CaseStatusHistory;
 import co.tz.sheriaconnectapi.model.Entities.IncidentReport;
 import co.tz.sheriaconnectapi.model.Entities.IncidentReportReply;
+import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.model.Enums.IncidentReportStatus;
 import co.tz.sheriaconnectapi.repositories.CaseStatusHistoryRepository;
 import co.tz.sheriaconnectapi.repositories.IncidentReportReplyRepository;
@@ -81,9 +82,7 @@ public class ReplyToIncidentReportService
         IncidentReportReply reply = new IncidentReportReply();
         reply.setIncidentReport(report);
         reply.setNeedsInfoHistory(requestHistory);
-        reply.setSubmittedByUser(
-                accessService.authenticatedUser(input.authentication()).orElse(null)
-        );
+        reply.setSubmittedByUser(authenticatedReportOwner(report, input));
         reply.setBody(body);
         replyRepository.save(reply);
 
@@ -116,5 +115,18 @@ public class ReplyToIncidentReportService
             throw new InvalidCaseInformationReplyException();
         }
         return body;
+    }
+
+    private User authenticatedReportOwner(
+            IncidentReport report,
+            IncidentReportReplyInput input
+    ) {
+        if (report.getReporterUser() == null) {
+            return null;
+        }
+
+        return accessService.authenticatedCitizenUser(input.authentication())
+                .filter(user -> user.getId().equals(report.getReporterUser().getId()))
+                .orElse(null);
     }
 }

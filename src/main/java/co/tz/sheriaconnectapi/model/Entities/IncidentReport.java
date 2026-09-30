@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(
@@ -42,6 +43,12 @@ public class IncidentReport {
 
     @Column(name = "tracking_token_hash", length = 128)
     private String trackingTokenHash;
+
+    @Column(name = "submission_id", unique = true)
+    private UUID submissionId;
+
+    @Column(name = "submission_fingerprint", length = 64)
+    private String submissionFingerprint;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "anonymity_mode", nullable = false, length = 32)

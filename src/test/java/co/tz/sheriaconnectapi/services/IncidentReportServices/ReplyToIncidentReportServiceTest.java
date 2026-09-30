@@ -8,6 +8,7 @@ import co.tz.sheriaconnectapi.model.DTOs.IncidentReportReplyRequest;
 import co.tz.sheriaconnectapi.model.Entities.CaseStatusHistory;
 import co.tz.sheriaconnectapi.model.Entities.IncidentReport;
 import co.tz.sheriaconnectapi.model.Entities.IncidentReportReply;
+import co.tz.sheriaconnectapi.model.Entities.User;
 import co.tz.sheriaconnectapi.model.Enums.IncidentReportStatus;
 import co.tz.sheriaconnectapi.repositories.CaseStatusHistoryRepository;
 import co.tz.sheriaconnectapi.repositories.IncidentReportReplyRepository;
@@ -17,12 +18,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.Authentication;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -51,7 +55,6 @@ class ReplyToIncidentReportServiceTest {
                 IncidentReportStatus.NEEDS_INFO
         )).thenReturn(Optional.of(requestHistory));
         when(replyRepository.existsByNeedsInfoHistory(requestHistory)).thenReturn(false);
-        when(accessService.authenticatedUser(null)).thenReturn(Optional.empty());
         when(reportRepository.save(report)).thenReturn(report);
 
         service().execute(input("  It happened in Ilemela.  ", "guest-token"));
@@ -71,6 +74,33 @@ class ReplyToIncidentReportServiceTest {
         assertEquals(IncidentReportStatus.NEEDS_INFO, historyCaptor.getValue().getFromStatus());
         assertEquals(IncidentReportStatus.UNDER_REVIEW, historyCaptor.getValue().getToStatus());
         assertNull(historyCaptor.getValue().getChangedByUser());
+    }
+
+    @Test
+    void signedInOwnerIsRecordedOnReply() {
+        User owner = new User();
+        owner.setId(18L);
+        IncidentReport report = report(IncidentReportStatus.NEEDS_INFO);
+        report.setReporterUser(owner);
+        CaseStatusHistory requestHistory = needsInfoHistory(46L);
+        Authentication authentication = mock(Authentication.class);
+
+        when(reportRepository.findByCaseNumberForUpdate(report.getCaseNumber()))
+                .thenReturn(Optional.of(report));
+        when(historyRepository.findFirstByIncidentReportAndToStatusOrderByCreatedAtDesc(
+                report,
+                IncidentReportStatus.NEEDS_INFO
+        )).thenReturn(Optional.of(requestHistory));
+        when(replyRepository.existsByNeedsInfoHistory(requestHistory)).thenReturn(false);
+        when(accessService.authenticatedCitizenUser(authentication)).thenReturn(Optional.of(owner));
+        when(reportRepository.save(report)).thenReturn(report);
+
+        service().execute(input("The requested details", null, authentication));
+
+        ArgumentCaptor<IncidentReportReply> replyCaptor =
+                ArgumentCaptor.forClass(IncidentReportReply.class);
+        verify(replyRepository).save(replyCaptor.capture());
+        assertSame(owner, replyCaptor.getValue().getSubmittedByUser());
     }
 
     @Test
@@ -126,11 +156,19 @@ class ReplyToIncidentReportServiceTest {
     }
 
     private IncidentReportReplyInput input(String body, String token) {
+        return input(body, token, null);
+    }
+
+    private IncidentReportReplyInput input(
+            String body,
+            String token,
+            Authentication authentication
+    ) {
         return new IncidentReportReplyInput(
                 "SC-2609-ABC234",
                 new IncidentReportReplyRequest(body),
                 token,
-                null
+                authentication
         );
     }
 

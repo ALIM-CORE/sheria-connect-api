@@ -3,6 +3,7 @@ package co.tz.sheriaconnectapi.model.DTOs;
 import co.tz.sheriaconnectapi.model.Entities.CaseStatusHistory;
 import co.tz.sheriaconnectapi.model.Entities.EvidenceFile;
 import co.tz.sheriaconnectapi.model.Entities.IncidentReport;
+import co.tz.sheriaconnectapi.model.Entities.IncidentReportReply;
 import co.tz.sheriaconnectapi.model.Enums.AnonymityMode;
 import co.tz.sheriaconnectapi.model.Enums.IncidentReportStatus;
 import co.tz.sheriaconnectapi.model.Enums.IncidentUrgency;
@@ -32,11 +33,13 @@ public class ProviderAcceptedCaseDetailResponse {
     private final Instant updatedAt;
     private final List<EvidenceFileResponse> evidenceFiles;
     private final List<CaseStatusHistoryResponse> statusHistory;
+    private final List<IncidentReportReplyResponse> reporterReplies;
 
     public ProviderAcceptedCaseDetailResponse(
             IncidentReport report,
             List<EvidenceFile> evidenceFiles,
-            List<CaseStatusHistory> statusHistory
+            List<CaseStatusHistory> statusHistory,
+            List<IncidentReportReply> reporterReplies
     ) {
         this.caseNumber = report.getCaseNumber();
         this.anonymityMode = report.getAnonymityMode();
@@ -58,7 +61,10 @@ public class ProviderAcceptedCaseDetailResponse {
                 .toList();
         this.evidenceCount = this.evidenceFiles.size();
         this.statusHistory = statusHistory.stream()
-                .map(CaseStatusHistoryResponse::new)
+                .map(history -> new CaseStatusHistoryResponse(history, false))
+                .toList();
+        this.reporterReplies = reporterReplies.stream()
+                .map(IncidentReportReplyResponse::new)
                 .toList();
     }
 }

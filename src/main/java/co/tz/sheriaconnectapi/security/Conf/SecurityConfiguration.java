@@ -103,6 +103,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/incident-reports/*/evidence/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/incident-reports/*/messages").permitAll()
                         .requestMatchers(HttpMethod.POST, "/incident-reports/*/messages").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/incident-reports/*/replies").permitAll()
                         .requestMatchers(HttpMethod.GET, "/stories/mine").authenticated()
                         .requestMatchers(HttpMethod.GET, "/stories/bookmarks").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/stories/*").authenticated()

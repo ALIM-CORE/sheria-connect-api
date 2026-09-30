@@ -247,7 +247,8 @@ public class GlobalExceptionHandler {
             InvalidMatchingRequestStatusException.class,
             InvalidStoryModerationStatusException.class,
             InvalidStoryContentException.class,
-            InvalidIncidentCategoryException.class
+            InvalidIncidentCategoryException.class,
+            InvalidCaseInformationReplyException.class
     })
     public ResponseEntity<StandardResponse<Void>> handleBadCaseRequest(
             DomainException ex
@@ -265,6 +266,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateIncidentCategoryException.class)
     public ResponseEntity<StandardResponse<Void>> handleDuplicateIncidentCategory(
             DuplicateIncidentCategoryException ex
+    ) {
+        return ResponseUtil.error(ex, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler({
+            CaseInformationReplyNotAllowedException.class,
+            DuplicateCaseInformationReplyException.class,
+            ReportSubmissionIdReusedException.class,
+            ReportSubmissionTokenUnavailableException.class
+    })
+    public ResponseEntity<StandardResponse<Void>> handleCaseConflict(
+            DomainException ex
     ) {
         return ResponseUtil.error(ex, HttpStatus.CONFLICT);
     }

@@ -117,6 +117,12 @@ public class UpdateIncidentReportStatusService
 
         IncidentReportStatus oldStatus = report.getStatus();
         IncidentReportStatus newStatus = request.getStatus();
+        if (newStatus == IncidentReportStatus.NEEDS_INFO
+                && (request.getNote() == null || request.getNote().isBlank())) {
+            throw new UserNotValidException(
+                    "A question is required when requesting more information"
+            );
+        }
         if (oldStatus != newStatus) {
             if (!ALLOWED_TRANSITIONS.getOrDefault(oldStatus, Set.of()).contains(newStatus)) {
                 throw new InvalidStatusTransitionException();
